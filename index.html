@@ -884,7 +884,6 @@ select.fi{cursor:pointer}
   .nav-right{gap:3px}
   .nav-right .btn-ghost{width:28px;height:28px}
   .nav-right .btn-sm,.nav-right .btn-secondary{display:none}
-  /* Show only sign-in on 300px — hide sign-out text, keep avatar */
   .nav-user{width:26px;height:26px;font-size:.7rem}
   .main{padding:10px 8px}
   .tcard-acts .btn{font-size:.68rem;padding:6px 5px}
@@ -898,6 +897,52 @@ select.fi{cursor:pointer}
   .auth-card{padding:14px 12px}
   .score-ring-wrap{transform:scale(.65);margin:-30px 0}
   .modal{margin:6px;padding:14px 12px}
+}
+
+/* ── BOTTOM NAV (mobile ≤ 600px) ── */
+.bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  background:var(--card);border-top:1px solid var(--border);
+  padding:6px 0 max(6px,env(safe-area-inset-bottom));
+  backdrop-filter:blur(12px);
+}
+.bottom-nav-inner{
+  display:flex;align-items:center;justify-content:space-around;
+  max-width:500px;margin:0 auto;
+}
+.bn-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 10px;border-radius:12px;cursor:pointer;
+  color:var(--t3);font-size:.6rem;font-weight:600;letter-spacing:.02em;
+  transition:color .18s,background .18s;border:none;background:transparent;
+  min-width:48px;
+}
+.bn-item i{font-size:1.35rem;line-height:1}
+.bn-item.active{color:var(--accent)}
+.bn-item:active{background:rgba(124,92,255,.1)}
+.bn-join{
+  background:linear-gradient(135deg,#e21b3c,#4257b2);
+  color:#fff!important;border-radius:14px;padding:7px 12px;
+  margin-top:-4px;
+}
+.bn-join i{font-size:1.5rem}
+
+@media(max-width:600px){
+  .bottom-nav{display:block}
+  /* push page content up so bottom nav doesn't overlap */
+  .page main,.page>main{padding-bottom:70px}
+  /* hide top nav items — keep only brand + lang pill */
+  .nav-right .btn-ghost,
+  .nav-right .btn-secondary,
+  .nav-right .btn-sm:not(.lang-btn){display:none!important}
+  .nav{padding:10px 14px}
+}
+@media(max-width:320px){
+  .bn-item{font-size:.52rem;min-width:40px;padding:5px 6px}
+  .bn-item i{font-size:1.15rem}
+  .bn-join i{font-size:1.25rem}
+  .bottom-nav{padding:4px 0 max(4px,env(safe-area-inset-bottom))}
 }
 </style>
 </head>
@@ -1011,7 +1056,7 @@ const DB = {
 // ── I18N ───────────────────────────────────────────────────────────────────
 const TRANS = {
   uz:{
-    library:"Kutubxona", flashcards:"Kartochkalar", join:"Qo'shilish",
+    home:"Bosh", library:"Kutubxona", flashcards:"Kartochkalar", join:"Qo'shilish",
     signOut:"Chiqish", signIn:"Kirish", getStarted:"Bepul boshlash",
     createQuiz:"Test yaratish", myTests:"Mening testlarim", search:"Qidirish…",
     study:"O'rganish", next:'Keyingisi <i class="ti ti-arrow-right"></i>', prev:'<i class="ti ti-arrow-left"></i> Oldingi', done:'Tugadi <i class="ti ti-check"></i>',
@@ -1103,7 +1148,7 @@ const TRANS = {
     nextSection:'Keyingi qism <i class="ti ti-arrow-right"></i>', finalScore:"Yakuniy ball",
   },
   ru:{
-    library:"Библиотека", flashcards:"Карточки", join:"Войти в игру",
+    home:"Главная", library:"Библиотека", flashcards:"Карточки", join:"Войти в игру",
     signOut:"Выйти", signIn:"Войти", getStarted:"Начать бесплатно",
     createQuiz:"Создать тест", myTests:"Мои тесты", search:"Поиск…",
     study:"Учиться", next:'Далее <i class="ti ti-arrow-right"></i>', prev:'<i class="ti ti-arrow-left"></i> Назад', done:'Готово <i class="ti ti-check"></i>',
@@ -1195,7 +1240,7 @@ const TRANS = {
     nextSection:'Следующая секция <i class="ti ti-arrow-right"></i>', finalScore:"Итоговый балл",
   },
   en:{
-    library:"Library", flashcards:"Flashcards", join:"Join",
+    home:"Home", library:"Library", flashcards:"Flashcards", join:"Join",
     signOut:"Sign out", signIn:"Sign In", getStarted:"Get Started Free",
     createQuiz:"Create Quiz", myTests:"My Tests", search:"Search…",
     study:"Study", next:'Next <i class="ti ti-arrow-right"></i>', prev:'<i class="ti ti-arrow-left"></i> Prev', done:'Done <i class="ti ti-check"></i>',
@@ -1419,6 +1464,7 @@ function paint(html){
   bind();
 }
 function frame(content){
+  const pg=S.page||'';
   document.getElementById('app').innerHTML=`<div class="page">
     <nav class="nav">
       <span class="nav-brand" onclick="go(S.user?'/dashboard':'/landing')">TopQuiz</span>
@@ -1433,7 +1479,26 @@ function frame(content){
       </div>
     </nav>
     <main>${content}</main>
-  </div>`;
+  </div>
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="bn-item ${pg==='dashboard'?'active':''}" onclick="go(S.user?'/dashboard':'/login')">
+        <i class="ti ti-home"></i><span>${t('home')||'Home'}</span>
+      </button>
+      <button class="bn-item ${pg==='browse'?'active':''}" onclick="go('/browse')">
+        <i class="ti ti-books"></i><span>${t('library')}</span>
+      </button>
+      <button class="bn-item bn-join" onclick="go('/join')">
+        <i class="ti ti-device-gamepad-2"></i>
+      </button>
+      <button class="bn-item ${pg==='flashcards'?'active':''}" onclick="go('/flashcards')">
+        <i class="ti ti-cards"></i><span>${t('flashcards')}</span>
+      </button>
+      <button class="bn-item ${pg==='upload'?'active':''}" onclick="go(S.user?'/upload':'/login')">
+        <i class="ti ti-plus"></i><span>${t('uploadTest')||'New'}</span>
+      </button>
+    </div>
+  </nav>`;
   bind();
 }
 
