@@ -21,8 +21,15 @@
   --glow:rgba(124,92,255,0.22);
   --gold:#F59E0B;--gold2:#EF4444;
 }
+/* Light mode */
+body.light{
+  --bg:#F5F6FA;--bg2:#ECEEF4;--bg3:#E2E5EF;
+  --card:#FFFFFF;--card2:#F0F2F8;--border:#D4D8E8;
+  --text:#0F1117;--t2:#4A5568;--t3:#718096;
+  --glow:rgba(124,92,255,0.12);
+}
 html,body{height:100%;background:var(--bg);color:var(--text);
-  font-family:'Satoshi',system-ui,sans-serif;font-size:16px;line-height:1.65}
+  font-family:'Satoshi',system-ui,sans-serif;font-size:16px;line-height:1.65;transition:background .25s,color .25s}
 #app{min-height:100vh;display:flex;flex-direction:column}
 .clash{font-family:'Clash Display',system-ui,sans-serif}
 
@@ -1012,6 +1019,7 @@ const S = {
   fcKnown: [],         // card ids marked "know it"
   fcLearning: [],      // card ids marked "still learning"
   dashSearch: '',      // dashboard search query
+  browseSearch: '', browseTag: '',  // library search
   dashTag: '',         // dashboard tag filter
   uploadTags: [],      // tags for current upload
   // ── GAME (Kahoot mode) ──
@@ -1449,7 +1457,24 @@ function route(){
   if(p==='challenge'&&parts[1]){frame(pgChallenge(parts[1]));return}
   if(p==='host-game'&&parts[1]){frame(pgHostGame(parts[1]));return}
   if(p==='play'&&parts[1]&&parts[2]){frame(pgPlay(parts[1],parts[2]));return}
-  if(p==='test'&&parts[1]){frame(pgQuiz(parts[1]));return}
+  if(p==='test'&&parts[1]){
+    // Support both internal id and shareId in URL
+    const rawId=parts[1];
+    const byShare=DB.tests().find(tt=>tt.shareId===rawId.toUpperCase());
+    if(byShare){frame(pgQuiz(byShare.id));return;}
+    // If not found locally, try Firebase then render
+    if(rawId.length===8&&rawId===rawId.toUpperCase()){
+      paint(`<div style="text-align:center;padding:80px 24px;color:var(--t3)">
+        <div style="font-size:2.5rem;margin-bottom:14px"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i></div>
+        <p>Loading test…</p></div>`);
+      fbGet('tests/'+rawId).then(remote=>{
+        if(remote){const ts=DB.tests();if(!ts.find(x=>x.shareId===rawId)){ts.push(remote);DB.setTests(ts);}frame(pgQuiz(remote.id));}
+        else frame(pgQuiz(rawId));
+      }).catch(()=>frame(pgQuiz(rawId)));
+      return;
+    }
+    frame(pgQuiz(rawId));return;
+  }
   if(p==='results'&&parts[1]){frame(pgResults(parts[1]));return}
   if(p==='browse'){frame(pgBrowse());return}
   if(!S.user){go('/landing');return}
@@ -1463,8 +1488,16 @@ function paint(html){
   document.getElementById('app').innerHTML=`<div class="page">${html}</div>`;
   bind();
 }
+function toggleTheme(){
+  document.body.classList.toggle('light');
+  localStorage.setItem('qh_theme',document.body.classList.contains('light')?'light':'dark');
+}
+(()=>{if(localStorage.getItem('qh_theme')==='light')document.body.classList.add('light');})();
+
 function frame(content){
   const pg=S.page||'';
+  const isQuizPage=pg==='test'||pg==='results'||pg==='play'||pg==='host-game';
+  const isLight=document.body.classList.contains('light');
   document.getElementById('app').innerHTML=`<div class="page">
     <nav class="nav">
       <span class="nav-brand" onclick="go(S.user?'/dashboard':'/landing')">TopQuiz</span>
@@ -1474,13 +1507,17 @@ function frame(content){
         <button class="btn btn-sm" style="background:linear-gradient(135deg,#e21b3c,#4257b2);color:#fff;font-weight:700"
           onclick="go('/join')"><i class="ti ti-device-gamepad-2"></i> ${t('join')}</button>
         ${langPill()}
+        <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" title="Toggle theme"
+          style="width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;font-size:1rem;opacity:.8">
+          <i class="ti ${isLight?'ti-moon':'ti-sun'}"></i>
+        </button>
         ${S.user?`<button class="btn btn-secondary btn-sm" onclick="logout()">${t('signOut')}</button>`
           :`<button class="btn btn-secondary btn-sm" onclick="go('/login')">${t('signIn')}</button>`}
       </div>
     </nav>
     <main>${content}</main>
   </div>
-  <nav class="bottom-nav">
+  ${isQuizPage?'':`<nav class="bottom-nav">
     <div class="bottom-nav-inner">
       <button class="bn-item ${pg==='dashboard'?'active':''}" onclick="go(S.user?'/dashboard':'/login')">
         <i class="ti ti-home"></i><span>${t('home')||'Home'}</span>
@@ -1498,7 +1535,7 @@ function frame(content){
         <i class="ti ti-plus"></i><span>${t('uploadTest')||'New'}</span>
       </button>
     </div>
-  </nav>`;
+  </nav>`}`;
   bind();
 }
 
@@ -1546,8 +1583,9 @@ function pgLanding(){
           <div class="ig">
             <input class="fi" type="text" id="landing-gid" placeholder="XXXXXXXX" maxlength="8"
               style="text-transform:uppercase;letter-spacing:.1em;font-weight:700;font-size:1rem"
-              oninput="this.value=this.value.toUpperCase()">
-            <button class="btn btn-primary" onclick="(function(){const id=document.getElementById('landing-gid').value.trim().toUpperCase();if(id.length!==8){toast('Enter 8-character Test ID','err');return}document.getElementById('gid')&&(document.getElementById('gid').value=id);handleGuest();})()">Go <i class="ti ti-arrow-right"></i></button>
+              oninput="this.value=this.value.toUpperCase()"
+              onkeydown="if(event.key==='Enter')handleGuest(this.value)">
+            <button class="btn btn-primary" onclick="handleGuest(document.getElementById('landing-gid').value)">Go <i class="ti ti-arrow-right"></i></button>
           </div>
         </div>
       </div>
@@ -1603,6 +1641,10 @@ function pgLogin(){
       <div class="fg"><label class="fl">${t('passPh')}</label>
         <input class="fi" type="password" id="lpw" placeholder="••••••••"></div>
       <button class="btn btn-primary btn-full btn-lg" onclick="handleLogin()">${t('doLogin')}</button>
+      <div style="text-align:center;margin-top:12px">
+        <span onclick="toast('Password reset: Contact support or create a new account with a different email.','info')"
+          style="font-size:.78rem;color:var(--al);cursor:pointer;font-weight:600">Forgot password?</span>
+      </div>
     </div>
     <!-- Search public tests as guest -->
     <div style="margin-top:16px;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:16px">
@@ -1732,7 +1774,15 @@ function pgDashboard(){
           ${sparkData.length>1?`<div style="margin-top:10px">${buildSparkline(sparkData)}</div>`:''}
         </div>
       </div>
-      <div class="share-id" onclick="copy('${tst.shareId}')" title="Click to copy ID"><i class="ti ti-link"></i> ${tst.shareId}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div class="share-id" onclick="copy('${tst.shareId}')" title="Click to copy code" style="flex:1"><i class="ti ti-link"></i> ${tst.shareId}</div>
+        <button onclick="copy(location.origin+location.pathname+'#/test/${tst.shareId}');toast('Link copied! 🔗')"
+          title="Copy shareable link"
+          style="background:rgba(124,92,255,.12);border:1.5px solid rgba(124,92,255,.3);color:var(--al);border-radius:8px;
+          padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer;white-space:nowrap">
+          <i class="ti ti-share"></i> Share link
+        </button>
+      </div>
       <div class="tcard-acts">
         <button class="btn btn-primary btn-sm" onclick="openTest('${tst.id}')">${t('takeQuiz')}</button>
         <button class="btn btn-sm" style="background:linear-gradient(135deg,#e21b3c,#4257b2);color:#fff;font-weight:700"
@@ -1740,7 +1790,6 @@ function pgDashboard(){
         <button class="btn btn-sm" style="background:linear-gradient(135deg,#F59E0B,#EF4444);color:#fff;font-weight:700"
           onclick="createChallenge('${tst.id}')">${t('challengeBtn')}</button>
         <button class="btn btn-secondary btn-sm" onclick="go('/edit/${tst.id}')">${t('editAnswers')}</button>
-        <button class="btn btn-secondary btn-sm" onclick="copy('${tst.shareId}')">${t('share')}</button>
         <button class="btn btn-secondary btn-sm" onclick="duplicateTest('${tst.id}')">${t('duplicate')}</button>
         <button class="btn btn-danger btn-sm" onclick="confirmDel('${tst.id}','${esc(tst.title)}')">${t('delete')}</button>
       </div>
@@ -2360,23 +2409,40 @@ function pgResults(rawId){
 }
 
 function pgBrowse(){
-  const tests=DB.tests().filter(t=>t.isPublic);
+  const allTests=DB.tests().filter(tst=>tst.isPublic);
+  const bq=(S.browseSearch||'').toLowerCase();
+  const bTag=S.browseTag||'';
+  let tests=allTests;
+  if(bq) tests=tests.filter(tst=>(tst.title||'').toLowerCase().includes(bq)||(tst.tags||[]).some(tg=>tg.includes(bq)));
+  if(bTag) tests=tests.filter(tst=>(tst.tags||[]).includes(bTag));
+  // Collect all tags
+  const allTags=[...new Set(allTests.flatMap(tst=>tst.tags||[]))].slice(0,12);
+  const shareLink=id=>`${location.origin}${location.pathname}#/test/${id}`;
   const cards=tests.length?`<div class="browse-grid">${tests.map(tst=>`
     <div class="browse-card" onclick="openPublicTest('${tst.id}')">
-      <div class="browse-card-ico"><i class="ti ti-file-description"></i></div>
-      <div style="display:flex;align-items:flex-start;gap:6px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="browse-card-ico" style="margin:0;font-size:1.6rem">${tst.emoji||'📋'}</div>
+        <button onclick="event.stopPropagation();copy('${shareLink(tst.shareId)}');toast('Link copied!')"
+          title="Copy share link"
+          style="background:rgba(124,92,255,.1);border:none;cursor:pointer;border-radius:8px;
+          width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--al);flex-shrink:0">
+          <i class="ti ti-share"></i>
+        </button>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px">
         <div class="browse-card-title" style="flex:1">${esc(tst.title)}</div>
         ${S.user?.id===tst.creatorId?`<button onclick="event.stopPropagation();renameTest('${tst.id}')"
           title="${t('rename')}" style="background:none;border:none;cursor:pointer;font-size:1rem;
-          padding:2px;opacity:.6;flex-shrink:0" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6"><i class="ti ti-pencil"></i></button>`:''}
+          padding:2px;opacity:.6;flex-shrink:0"><i class="ti ti-pencil"></i></button>`:''}
       </div>
       <div class="browse-card-meta">${tst.questions.length} ${t('questionsCount')} · ${tst.sessionCount||10} ${t('perSession')}${tst.timerSeconds?` · ⏱ ${tst.timerSeconds}s`:''}</div>
-      <div class="share-id" onclick="event.stopPropagation();copy('${tst.shareId}')" style="font-size:.7rem"><i class="ti ti-link"></i> ${tst.shareId}</div>
+      ${(tst.tags||[]).length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${(tst.tags||[]).map(tg=>`<span class="tag-chip" style="cursor:pointer" onclick="event.stopPropagation();S.browseTag='${esc(tg)}';frame(pgBrowse())">#${esc(tg)}</span>`).join('')}</div>`:''}
+      <div class="share-id" onclick="event.stopPropagation();copy('${shareLink(tst.shareId)}');toast('Link copied!')" style="font-size:.7rem"><i class="ti ti-link"></i> ${tst.shareId}</div>
     </div>`).join('')}</div>`
   :`<div class="empty">
     <div class="empty-ico"><i class="ti ti-search"></i></div>
-    <h3>${t('noPublicTests')}</h3>
-    <p>${t('noPublicHint')}</p>
+    <h3>${bq||bTag?'No results found':''+t('noPublicTests')}</h3>
+    <p>${bq||bTag?'Try a different search or tag.':t('noPublicHint')}</p>
     <br>${S.user?`<button class="btn btn-primary" onclick="go('/upload')">${t('createTestBtn')}</button>`
       :`<button class="btn btn-secondary" onclick="go('/login')">${t('signInCreate')}</button>`}
   </div>`;
@@ -2384,11 +2450,21 @@ function pgBrowse(){
     <div class="pg-head">
       <div>
         <div class="pg-title">${t('testLib')}</div>
-        <div class="pg-sub">${tests.length} ${t('publicTestsAvail')}</div>
+        <div class="pg-sub">${tests.length} / ${allTests.length} ${t('publicTestsAvail')}</div>
       </div>
       ${S.user?`<button class="btn btn-primary" onclick="go('/upload')"><i class="ti ti-plus"></i> ${t('uploadTest')}</button>`
         :`<button class="btn btn-secondary" onclick="go('/login')">${t('signIn')}</button>`}
     </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <input class="dash-search" placeholder="🔍 Search tests…" value="${esc(S.browseSearch||'')}"
+        oninput="S.browseSearch=this.value;frame(pgBrowse())"
+        style="flex:1;min-width:180px">
+      ${bTag?`<button class="btn btn-ghost btn-sm" onclick="S.browseTag='';frame(pgBrowse())"><i class="ti ti-x"></i> #${esc(bTag)}</button>`:''}
+    </div>
+    ${allTags.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px">
+      ${allTags.map(tg=>`<span class="tag-chip${bTag===tg?' active':''}" style="cursor:pointer"
+        onclick="S.browseTag=S.browseTag==='${esc(tg)}'?'':'${esc(tg)}';frame(pgBrowse())">#${esc(tg)}</span>`).join('')}
+    </div>`:''}
     ${cards}
   </div>`
 }
@@ -3401,8 +3477,12 @@ function handleRegister(){
   try{doRegister(name,email,pw);go('/dashboard')}
   catch(e){err.innerHTML=`<div class="err-msg">${esc(e.message)}</div>`}
 }
-async function handleGuest(){
-  const id=document.getElementById('gid').value.trim().toUpperCase();
+async function handleGuest(rawId){
+  // Accept id directly OR read from any input on the page
+  const id=(rawId||
+    (document.getElementById('gid')&&document.getElementById('gid').value)||
+    (document.getElementById('landing-gid')&&document.getElementById('landing-gid').value)||
+    '').trim().toUpperCase();
   if(id.length!==8){toast('Enter a valid 8-character Test ID','err');return}
   // First check localStorage
   let t=DB.tests().find(t=>t.shareId===id);
@@ -3412,7 +3492,6 @@ async function handleGuest(){
       toast('Searching...','info');
       const remote=await fbGet('tests/'+id);
       if(remote){
-        // Save locally for next time
         const ts=DB.tests();
         if(!ts.find(x=>x.shareId===id)){ts.push(remote);DB.setTests(ts);}
         t=remote;
@@ -3878,6 +3957,15 @@ function saveResult(testId){
   if(idx>=0)all[idx]=entry;else all.push(entry);
   DB.setResults(all);
   tickStudyStreak();
+  // Increment play count on the test in Firebase
+  try{
+    const test=DB.tests().find(t=>t.id===testId);
+    if(test?.shareId){
+      fbGet('tests/'+test.shareId+'/plays').then(n=>{
+        fbSet('tests/'+test.shareId+'/plays',(n||0)+1).catch(()=>{});
+      }).catch(()=>{});
+    }
+  }catch(e){}
 }
 
 // ── TIMER ──────────────────────────────────────────────────────────────────
@@ -4039,6 +4127,20 @@ const _DEFAULT_GEMINI = 'AIzaSyA2hJwbiBK3iHHtWznfyWwonjsG55T4sbE';
   localStorage.setItem('qh_groq_key',_DEFAULT_GROQ);
   const bad='AIzaSyBa8P5f1ayCijz9CQlQKvxIz2hSKBHCYoQ';
   if(localStorage.getItem('qh_gemini_key')===bad) localStorage.removeItem('qh_gemini_key');
+})();
+
+// ── One-time Firebase sync: push all local tests to cloud so share IDs work everywhere ──
+(async()=>{
+  if(localStorage.getItem('qh_fb_synced')) return;
+  try{
+    const tests=JSON.parse(localStorage.getItem('qh_t')||'[]');
+    if(!tests.length){localStorage.setItem('qh_fb_synced','1');return;}
+    for(const test of tests){
+      if(test.shareId) await fbSet('tests/'+test.shareId, test).catch(()=>{});
+    }
+    localStorage.setItem('qh_fb_synced','1');
+    console.log(`Synced ${tests.length} tests to Firebase`);
+  }catch(e){}
 })();
 
 function getGroqKey(){return localStorage.getItem('qh_groq_key')||_DEFAULT_GROQ;}
