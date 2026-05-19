@@ -1514,67 +1514,85 @@ function pgLanding(){
       </div>
     </nav>
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-      padding:60px 24px;text-align:center;max-width:780px;margin:0 auto">
-      <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 16px;
+      padding:clamp(24px,6vw,60px) clamp(14px,4vw,24px);text-align:center;max-width:780px;margin:0 auto;width:100%">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;
         background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.3);border-radius:999px;
-        font-size:.78rem;font-weight:700;color:var(--al);margin-bottom:28px;letter-spacing:.04em">
+        font-size:clamp(.65rem,.78rem + .2vw,.78rem);font-weight:700;color:var(--al);margin-bottom:clamp(16px,4vw,28px);letter-spacing:.04em">
         ${t('poweredBy')}
       </div>
-      <h1 style="font-family:'Clash Display',sans-serif;font-size:clamp(2.4rem,6vw,4rem);
-        font-weight:700;letter-spacing:-.04em;line-height:1.1;margin-bottom:20px">
+      <h1 style="font-family:'Clash Display',sans-serif;font-size:clamp(1.8rem,6vw,4rem);
+        font-weight:700;letter-spacing:-.04em;line-height:1.1;margin-bottom:clamp(12px,3vw,20px)">
         ${t('heroTitle').replace('<br>','<br><span style="background:linear-gradient(135deg,var(--accent),var(--al));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">').replace('.',`.</span>`)}
       </h1>
-      <p style="font-size:1.15rem;color:var(--t2);max-width:520px;line-height:1.7;margin-bottom:40px">
+      <p style="font-size:clamp(.88rem,1.1rem + .2vw,1.15rem);color:var(--t2);max-width:520px;line-height:1.65;margin-bottom:clamp(22px,5vw,40px);padding:0 4px">
         ${t('heroSub')}
       </p>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:36px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:clamp(20px,4vw,36px);width:100%">
         <button class="btn btn-primary btn-lg" onclick="go('/register')"
-          style="font-size:1rem;padding:14px 32px;border-radius:16px">
+          style="font-size:clamp(.88rem,1rem,.95rem);padding:clamp(10px,3.5vw,14px) clamp(18px,6vw,32px);border-radius:16px;flex:1;max-width:220px">
           ${t('getStarted')} <i class="ti ti-arrow-right"></i>
         </button>
         <button class="btn btn-secondary btn-lg" onclick="go('/browse')"
-          style="font-size:1rem;padding:14px 32px;border-radius:16px">
+          style="font-size:clamp(.88rem,1rem,.95rem);padding:clamp(10px,3.5vw,14px) clamp(18px,6vw,32px);border-radius:16px;flex:1;max-width:220px">
           <i class="ti ti-books"></i> ${t('library')}
         </button>
       </div>
-      <div style="display:flex;gap:32px;flex-wrap:wrap;justify-content:center;margin-bottom:52px">
+      <!-- Join with code box on landing -->
+      <div style="width:100%;max-width:380px;margin-bottom:clamp(20px,4vw,36px)">
+        <div style="background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:14px 16px">
+          <div style="font-size:.75rem;font-weight:700;color:var(--t3);letter-spacing:.06em;margin-bottom:10px;text-align:left">
+            <i class="ti ti-link"></i> ENTER TEST CODE
+          </div>
+          <div class="ig">
+            <input class="fi" type="text" id="landing-gid" placeholder="XXXXXXXX" maxlength="8"
+              style="text-transform:uppercase;letter-spacing:.1em;font-weight:700;font-size:1rem"
+              oninput="this.value=this.value.toUpperCase()">
+            <button class="btn btn-primary" onclick="(function(){const id=document.getElementById('landing-gid').value.trim().toUpperCase();if(id.length!==8){toast('Enter 8-character Test ID','err');return}document.getElementById('gid')&&(document.getElementById('gid').value=id);handleGuest();})()">Go <i class="ti ti-arrow-right"></i></button>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:clamp(16px,4vw,32px);flex-wrap:wrap;justify-content:center;margin-bottom:clamp(28px,5vw,52px)">
         ${[[14200,'+','quizzes created'],[89000,'+','questions answered'],[40,'+','countries']].map(([n,s,l])=>`
           <div style="text-align:center">
-            <div style="font-family:'Clash Display',sans-serif;font-size:1.6rem;font-weight:700;color:var(--accent)"
+            <div style="font-family:'Clash Display',sans-serif;font-size:clamp(1.2rem,1.6rem,1.6rem);font-weight:700;color:var(--accent)"
               data-count="${n}" data-suffix="${s}">0${s}</div>
-            <div style="font-size:.8rem;color:var(--t3);font-weight:500;margin-top:2px">${l}</div>
+            <div style="font-size:clamp(.7rem,.8rem,.8rem);color:var(--t3);font-weight:500;margin-top:2px">${l}</div>
           </div>`).join('<div style="color:var(--border);font-size:1.5rem;align-self:center">·</div>')}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-        gap:16px;width:100%;max-width:680px;text-align:left">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));
+        gap:12px;width:100%;max-width:680px;text-align:left">
         ${[
-          ['<i class="ti ti-device-gamepad-2"></i>','Live Kahoot Mode','Host live games with a PIN — real-time leaderboard, speed scoring'],
-          ['<i class="ti ti-crown"></i>','King AI Generator','Paste any text — get a full quiz in seconds powered by Gemini'],
-          ['<i class="ti ti-cards"></i>','Flashcards','Create word + definition decks and study with flip cards'],
-          ['<i class="ti ti-sword"></i>','1v1 Challenges','Challenge a friend async — take the same quiz, see who wins'],
-          ['<i class="ti ti-map"></i>','Mastery Map','See exactly which topics you know and which need work'],
-          ['<i class="ti ti-calendar"></i>','Spaced Repetition','Reviews scheduled automatically — never forget what you learned'],
+          ['<i class="ti ti-device-gamepad-2"></i>','Live Kahoot Mode','Host live games with a PIN — real-time leaderboard'],
+          ['<i class="ti ti-crown"></i>','King AI Generator','Paste any text — get a full quiz in seconds'],
+          ['<i class="ti ti-cards"></i>','Flashcards','Create decks and study with flip cards'],
+          ['<i class="ti ti-sword"></i>','1v1 Challenges','Challenge a friend — take the same quiz, see who wins'],
+          ['<i class="ti ti-map"></i>','Mastery Map','See which topics you know and which need work'],
+          ['<i class="ti ti-calendar"></i>','Spaced Repetition','Reviews scheduled automatically'],
         ].map(([ico,title,desc])=>`
-          <div style="background:var(--card);border:1.5px solid var(--border);border-radius:18px;
-            padding:20px;transition:border-color .2s,transform .2s"
+          <div style="background:var(--card);border:1.5px solid var(--border);border-radius:16px;
+            padding:clamp(14px,4vw,20px);transition:border-color .2s,transform .2s"
             onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'"
             onmouseout="this.style.borderColor='var(--border)';this.style.transform=''">
-            <div style="font-size:1.8rem;margin-bottom:10px;display:flex;align-items:center">${ico}</div>
-            <div style="font-family:'Clash Display',sans-serif;font-weight:700;font-size:.95rem;
-              margin-bottom:6px;letter-spacing:-.01em">${title}</div>
-            <div style="font-size:.8rem;color:var(--t3);line-height:1.55">${desc}</div>
+            <div style="font-size:clamp(1.4rem,1.8rem,1.8rem);margin-bottom:8px;display:flex;align-items:center">${ico}</div>
+            <div style="font-family:'Clash Display',sans-serif;font-weight:700;font-size:clamp(.82rem,.95rem,.95rem);
+              margin-bottom:4px;letter-spacing:-.01em">${title}</div>
+            <div style="font-size:clamp(.72rem,.8rem,.8rem);color:var(--t3);line-height:1.5">${desc}</div>
           </div>`).join('')}
       </div>
     </div>
-    <div style="text-align:center;padding:24px;color:var(--t3);font-size:.78rem;border-top:1px solid var(--border)">
+    <div style="text-align:center;padding:20px 16px;color:var(--t3);font-size:.78rem;border-top:1px solid var(--border)">
       ${t('alreadyHave')} <a onclick="go('/login')" style="color:var(--al);cursor:pointer;font-weight:600">${t('doLogin')} <i class="ti ti-arrow-right"></i></a>
     </div>
   </div>`
 }
 
-function pgLogin(){return`
-<div class="auth-wrap">
-  <div class="auth-box">
+function pgLogin(){
+  const pub=DB.tests().filter(t=>t.isPublic);
+  const lq=(S.loginSearch||'').toLowerCase();
+  const filtered=lq?pub.filter(t=>(t.title||'').toLowerCase().includes(lq)):pub;
+  return`
+<div class="auth-wrap" style="padding:16px 12px">
+  <div class="auth-box" style="max-width:440px">
     <div class="auth-logo"><h1>TopQuiz</h1><p>${t('heroTitle').replace('<br>',' ')}</p></div>
     <div style="display:flex;justify-content:center;margin-bottom:16px">${langPill()}</div>
     <div class="auth-card">
@@ -1585,11 +1603,42 @@ function pgLogin(){return`
       <div class="fg"><label class="fl">${t('passPh')}</label>
         <input class="fi" type="password" id="lpw" placeholder="••••••••"></div>
       <button class="btn btn-primary btn-full btn-lg" onclick="handleLogin()">${t('doLogin')}</button>
-      <div class="divider">or</div>
-      <label class="fl">Enter Test ID to take quiz as guest</label>
+    </div>
+    <!-- Search public tests as guest -->
+    <div style="margin-top:16px;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:16px">
+      <div style="font-size:.72rem;font-weight:700;color:var(--t3);letter-spacing:.06em;margin-bottom:10px">
+        <i class="ti ti-search"></i> BROWSE TESTS AS GUEST
+      </div>
+      <input class="fi" type="text" placeholder="Search public tests…" value="${esc(S.loginSearch||'')}"
+        oninput="S.loginSearch=this.value;paint(pgLogin())"
+        style="margin-bottom:10px;font-size:.875rem">
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto">
+        ${filtered.length?filtered.slice(0,10).map(tst=>`
+          <div onclick="go('/test/${tst.id}')"
+            style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);
+              border-radius:12px;cursor:pointer;transition:background .15s"
+            onmouseover="this.style.background='rgba(124,92,255,.1)'"
+            onmouseout="this.style.background='var(--bg3)'">
+            <div style="font-size:1.4rem;width:32px;text-align:center">${tst.emoji||'📋'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(tst.title)}</div>
+              <div style="font-size:.72rem;color:var(--t3)">${tst.questions.length} questions · ${tst.sessionCount||10}/session</div>
+            </div>
+            <i class="ti ti-chevron-right" style="color:var(--t3);flex-shrink:0"></i>
+          </div>`).join('')
+        :`<div style="text-align:center;padding:20px;color:var(--t3);font-size:.85rem">No public tests found</div>`}
+      </div>
+    </div>
+    <!-- Join with code -->
+    <div style="margin-top:12px;background:var(--card);border:1.5px solid var(--border);border-radius:18px;padding:16px">
+      <div style="font-size:.72rem;font-weight:700;color:var(--t3);letter-spacing:.06em;margin-bottom:10px">
+        <i class="ti ti-link"></i> JOIN WITH TEST CODE
+      </div>
       <div class="ig">
-        <input class="fi" type="text" id="gid" placeholder="XXXXXXXX" maxlength="8">
-        <button class="btn btn-secondary" onclick="handleGuest()">Go <i class="ti ti-arrow-right"></i></button>
+        <input class="fi" type="text" id="gid" placeholder="XXXXXXXX" maxlength="8"
+          style="text-transform:uppercase;letter-spacing:.1em;font-weight:700"
+          oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-primary" onclick="handleGuest()">Go <i class="ti ti-arrow-right"></i></button>
       </div>
     </div>
     <div class="auth-foot">${t('noAccount')} <a onclick="go('/register')">${t('doRegister')}</a> · <a onclick="go('/browse')">${t('library')}</a></div>
@@ -2794,13 +2843,15 @@ function pgEditAnswers(testId){
             </select>
           </div>
           <div>
-            <label class="fl" style="margin-bottom:6px">Session size</label>
-            <select class="fi" style="padding:8px 12px;font-size:.82rem;width:auto"
-              onchange="editSetting('${testId}','sessionCount',parseInt(this.value))">
-              ${[10,15,20,25,30,40,test.questions.length].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b).map(n=>
-                `<option value="${n}" ${test.sessionCount===n?'selected':''}>${n===test.questions.length?'All ('+n+')':n}</option>`
-              ).join('')}
-            </select>
+            <label class="fl" style="margin-bottom:8px">Questions / session</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${[10,15,20,25,30,test.questions.length].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b).map(n=>`
+                <button class="chip${(test.sessionCount||10)===n?' on':''}"
+                  onclick="editSetting('${testId}','sessionCount',${n});document.querySelectorAll('.sess-chip').forEach(b=>{b.classList.remove('on')});this.classList.add('on')"
+                  style="min-width:44px;font-size:.8rem" class="chip sess-chip">
+                  ${n===test.questions.length?`All (${n})`:n}
+                </button>`).join('')}
+            </div>
           </div>
           <div style="padding-bottom:4px">
             <label class="fl" style="margin-bottom:8px">Visibility</label>
