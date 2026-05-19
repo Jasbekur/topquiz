@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quizchi</title>
+<title>TopQuiz</title>
 <meta name="theme-color" content="#7C5CFF">
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.9.0/dist/tabler-icons.min.css">
@@ -1028,7 +1028,7 @@ const TRANS = {
     heroTitle:"Aqlli o'rganing.<br>Tez yodlang.",
     heroSub:"Testlar, o'yinlar va kartochkalar — hammasini bir joyda yarating va o'rganing.",
     poweredBy:'<i class="ti ti-sparkles"></i> KING AI BILAN ISHLAYDI',
-    signInTitle:"Quizchiga kirish", registerTitle:"Ro'yxatdan o'tish",
+    signInTitle:"TopQuizga kirish", registerTitle:"Ro'yxatdan o'tish",
     emailPh:"Email manzil", passPh:"Parol", namePh:"Ism familiya",
     alreadyHave:"Allaqachon hisobingiz bormi?", noAccount:"Hisob yo'qmi?",
     doRegister:"Ro'yxatdan o'tish", doLogin:"Kirish",
@@ -1047,7 +1047,7 @@ const TRANS = {
     // dashboard
     testsInLib:"ta test kutubxonangizda", noTestsYet:"Hali test yo'q",
     noTestsHint:".docx yuklang yoki qo'lda savollar yarating",
-    uploadTest:"Test yuklash", quickPractice:"⚡ Tez mashq", // ⚡ kept as brand identity
+    uploadTest:"Test yuklash", quickPractice:"Tez mashq", // ⚡ kept as brand identity
     takeQuiz:"Testni boshlash", editAnswers:"Javoblarni tahrirlash",
     share:"Ulashish", duplicate:'<i class="ti ti-copy"></i> Nusxalash', delete:"O'chirish",
     rename:"Nomini o'zgartirish", hostGameBtn:'<i class="ti ti-device-gamepad-2"></i> Xost bo\'lish',
@@ -1120,7 +1120,7 @@ const TRANS = {
     heroTitle:"Учись умнее.<br>Запоминай быстрее.",
     heroSub:"Тесты, игры и карточки — всё в одном месте. Создавай и учись.",
     poweredBy:'<i class="ti ti-sparkles"></i> НА ОСНОВЕ KING AI',
-    signInTitle:"Войти в Quizchi", registerTitle:"Регистрация",
+    signInTitle:"Войти в TopQuiz", registerTitle:"Регистрация",
     emailPh:"Электронная почта", passPh:"Пароль", namePh:"Имя и фамилия",
     alreadyHave:"Уже есть аккаунт?", noAccount:"Нет аккаунта?",
     doRegister:"Зарегистрироваться", doLogin:"Войти",
@@ -1139,7 +1139,7 @@ const TRANS = {
     // dashboard
     testsInLib:"тестов в библиотеке", noTestsYet:"Тестов пока нет",
     noTestsHint:"Загрузите .docx или создайте вопросы вручную",
-    uploadTest:"Загрузить тест", quickPractice:"⚡ Быстрая практика",
+    uploadTest:"Загрузить тест", quickPractice:"Быстрая практика",
     takeQuiz:"Начать тест", editAnswers:"Редактировать ответы",
     share:"Поделиться", duplicate:'<i class="ti ti-copy"></i> Дублировать', delete:"Удалить",
     rename:"Переименовать", hostGameBtn:'<i class="ti ti-device-gamepad-2"></i> Начать игру',
@@ -1212,7 +1212,7 @@ const TRANS = {
     heroTitle:"Study smarter.<br>Remember faster.",
     heroSub:"Create quizzes, play games and study with flashcards — all in one place.",
     poweredBy:'<i class="ti ti-sparkles"></i> POWERED BY KING AI',
-    signInTitle:"Sign in to Quizchi", registerTitle:"Create your account",
+    signInTitle:"Sign in to TopQuiz", registerTitle:"Create your account",
     emailPh:"Email address", passPh:"Password", namePh:"Full name",
     alreadyHave:"Already have an account?", noAccount:"Don't have an account?",
     doRegister:"Create account", doLogin:"Sign In",
@@ -1231,7 +1231,7 @@ const TRANS = {
     // dashboard
     testsInLib:"tests in your library", noTestsYet:"No tests yet",
     noTestsHint:"Upload a .docx file or build questions manually",
-    uploadTest:"Upload Test", quickPractice:"⚡ Quick Practice",
+    uploadTest:"Upload Test", quickPractice:"Quick Practice",
     takeQuiz:"Take Quiz", editAnswers:"Edit Answers",
     share:"Share", duplicate:'<i class="ti ti-copy"></i> Duplicate', delete:"Delete",
     rename:"Rename", hostGameBtn:'<i class="ti ti-device-gamepad-2"></i> Host Game',
@@ -1421,7 +1421,7 @@ function paint(html){
 function frame(content){
   document.getElementById('app').innerHTML=`<div class="page">
     <nav class="nav">
-      <span class="nav-brand" onclick="go(S.user?'/dashboard':'/landing')">⚡ Quizchi</span>
+      <span class="nav-brand" onclick="go(S.user?'/dashboard':'/landing')">TopQuiz</span>
       <div class="nav-right">
         <button class="btn btn-ghost btn-sm" onclick="go('/browse')" style="font-size:.78rem;opacity:.7"><i class="ti ti-books"></i> ${t('library')}</button>
         <button class="btn btn-ghost btn-sm" onclick="go('/flashcards')" style="font-size:.78rem;opacity:.7"><i class="ti ti-cards"></i> ${t('flashcards')}</button>
@@ -1441,7 +1441,7 @@ function frame(content){
 function pgLanding(){
   return`<div style="min-height:100vh;background:var(--bg);display:flex;flex-direction:column">
     <nav class="nav" style="background:transparent;border-bottom:none">
-      <span class="nav-brand" style="font-size:1.4rem" onclick="go('/landing')">⚡ Quizchi</span>
+      <span class="nav-brand" style="font-size:1.4rem" onclick="go('/landing')">TopQuiz</span>
       <div class="nav-right">
         ${langPill()}
         <button class="btn btn-ghost btn-sm" onclick="go('/login')">${t('signIn')}</button>
@@ -1510,7 +1510,7 @@ function pgLanding(){
 function pgLogin(){return`
 <div class="auth-wrap">
   <div class="auth-box">
-    <div class="auth-logo"><h1>⚡ Quizchi</h1><p>${t('heroTitle').replace('<br>',' ')}</p></div>
+    <div class="auth-logo"><h1>TopQuiz</h1><p>${t('heroTitle').replace('<br>',' ')}</p></div>
     <div style="display:flex;justify-content:center;margin-bottom:16px">${langPill()}</div>
     <div class="auth-card">
       <h2>${t('signInTitle')}</h2><p class="sub">${t('myTests')}</p>
@@ -1534,7 +1534,7 @@ function pgLogin(){return`
 function pgRegister(){return`
 <div class="auth-wrap">
   <div class="auth-box">
-    <div class="auth-logo"><h1>⚡ Quizchi</h1><p>${t('joinThousands')}</p></div>
+    <div class="auth-logo"><h1>TopQuiz</h1><p>${t('joinThousands')}</p></div>
     <div style="display:flex;justify-content:center;margin-bottom:16px">${langPill()}</div>
     <div class="auth-card">
       <h2>${t('registerTitle')}</h2><p class="sub">${t('getStarted')}</p>
@@ -3858,7 +3858,7 @@ function launchConfetti(){
 function shareResult(pct,title,correct,total){
   const grade=pct>=90?'Excellent':pct>=70?'Good job':pct>=50?'Keep practicing':'Needs improvement';
   const emoji=pct>=90?'🏆':pct>=70?'🎯':pct>=40?'🤔':'😓';
-  const txt=`${emoji} I scored ${pct}% on "${title}" — ${correct}/${total} correct! (${grade})\n\nTry it yourself on Quizchi`;
+  const txt=`${emoji} I scored ${pct}% on "${title}" — ${correct}/${total} correct! (${grade})\n\nTry it yourself on TopQuiz`;
   navigator.clipboard.writeText(txt).then(()=>toast('Result copied — share it! 🚀')).catch(()=>toast(txt));
 }
 
@@ -3980,7 +3980,7 @@ const PROVIDERS={
         try{
           const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
             method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':'https://quizchi.app','X-Title':'Quizchi'},
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':'https://quizchi.app','X-Title':'TopQuiz'},
             body:JSON.stringify({model,messages:[{role:'user',content:prompt}],max_tokens:maxTok})
           });
           const d=await r.json();
@@ -5084,7 +5084,7 @@ function startQuickPractice(){
   }
   if(!qs.length){toast('🎉 You\'re on top of everything — no reviews due!');return;}
   const practiceQs=shuffle(qs).slice(0,20);
-  const fake={id:'quick_practice',shareId:'PRACTICE',title:'⚡ Quick Practice',
+  const fake={id:'quick_practice',shareId:'PRACTICE',title:'Quick Practice',
     questions:practiceQs,sessionCount:practiceQs.length,timerSeconds:0,emoji:'⚡',creatorId:S.user.id};
   const ts=DB.tests();
   const ei=ts.findIndex(t=>t.id==='quick_practice');
@@ -5153,13 +5153,13 @@ function shareResultAsImage(pct,title,correct,total,emoji){
     // Branding
     ctx.font='22px system-ui,-apple-system,sans-serif';
     ctx.fillStyle='#7C5CFF';
-    ctx.fillText('⚡ Quizchi',400,390);
+    ctx.fillText('TopQuiz',400,390);
     // Download / share
     canvas.toBlob(async blob=>{
       try{
         const file=new File([blob],'quizchi-score.png',{type:'image/png'});
         if(navigator.share&&navigator.canShare({files:[file]})){
-          await navigator.share({files:[file],title:'My Quizchi Score',text:`I scored ${pct}% on "${title}"!`});
+          await navigator.share({files:[file],title:'My TopQuiz Score',text:`I scored ${pct}% on "${title}"!`});
         }else{
           const a=document.createElement('a');
           a.href=URL.createObjectURL(blob);
@@ -5174,7 +5174,7 @@ function shareResultAsImage(pct,title,correct,total,emoji){
 // ── PWA MANIFEST ────────────────────────────────────────────────────────────
 (function(){
   try{
-    const m={name:'Quizchi',short_name:'Quizchi',start_url:'.',display:'standalone',
+    const m={name:'TopQuiz',short_name:'TopQuiz',start_url:'.',display:'standalone',
       background_color:'#070B14',theme_color:'#7C5CFF',
       description:'Create & share interactive quizzes'};
     const blob=new Blob([JSON.stringify(m)],{type:'application/json'});
