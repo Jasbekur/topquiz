@@ -3285,10 +3285,24 @@ function handleRegister(){
   try{doRegister(name,email,pw);go('/dashboard')}
   catch(e){err.innerHTML=`<div class="err-msg">${esc(e.message)}</div>`}
 }
-function handleGuest(){
+async function handleGuest(){
   const id=document.getElementById('gid').value.trim().toUpperCase();
   if(id.length!==8){toast('Enter a valid 8-character Test ID','err');return}
-  const t=DB.tests().find(t=>t.shareId===id);
+  // First check localStorage
+  let t=DB.tests().find(t=>t.shareId===id);
+  if(!t){
+    // Then check Firebase cloud
+    try{
+      toast('Searching...','info');
+      const remote=await fbGet('tests/'+id);
+      if(remote){
+        // Save locally for next time
+        const ts=DB.tests();
+        if(!ts.find(x=>x.shareId===id)){ts.push(remote);DB.setTests(ts);}
+        t=remote;
+      }
+    }catch(e){}
+  }
   if(!t){toast('Test not found. Check the ID.','err');return}
   S.quizTestId='';S.quizQs=[];S.allQs=[];
   go(`/test/${t.id}`);
@@ -3389,6 +3403,8 @@ function saveTest(){
   const test={id:uid(),shareId:uid(8),title,creatorId:S.user.id,
     questions:S.parsedQs,sessionCount:count,timerSeconds,isPublic,emoji,tags,at:Date.now()};
   const ts=DB.tests();ts.push(test);DB.setTests(ts);
+  // Also save to Firebase so others can find by share ID
+  fbSet('tests/'+test.shareId, test).catch(()=>{});
   S.parsedQs=[];S.parsedName='';S.selectedCount=0;S.builderOpen=false;
   S.uploadTimer=0;S.uploadIsPublic=false;S.uploadTags=[];
   toast(`"${title}" saved!${isPublic?' Published to library.':''}`);
