@@ -1020,6 +1020,7 @@ const S = {
   fcLearning: [],      // card ids marked "still learning"
   dashSearch: '',      // dashboard search query
   browseSearch: '', browseTag: '',  // library search
+  quizShuffle: false, customSessionSize: 0,  // quiz settings
   dashTag: '',         // dashboard tag filter
   uploadTags: [],      // tags for current upload
   // ── GAME (Kahoot mode) ──
@@ -1363,8 +1364,10 @@ function hashPw(s){
 }
 function go(p){location.hash='#'+p}
 function esc(s){
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
+// Safe version for JS string args inside onclick="fn('...')" — escapes single quotes
+function escJs(s){return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 function toast(msg,type='ok'){
   const d=document.createElement('div');
   d.className=`toast ${type}-t`;d.textContent=msg;
@@ -2133,7 +2136,9 @@ Next question...</pre>
 }
 
 function pgSessionList(test){
-  const sessionSize=test.sessionCount||10;
+  const customSize=S.customSessionSize&&S.customSessionSize>0?S.customSessionSize:null;
+  const sessionSize=customSize||(test.sessionCount||10);
+  const doShuffle=S.quizShuffle||false;
   const totalQ=test.questions.length;
   const totalSections=Math.ceil(totalQ/sessionSize);
   const userId=S.user?.id||'guest';
@@ -2165,8 +2170,40 @@ function pgSessionList(test){
       <div class="picker-title">${esc(test.title)}</div>
       <div class="picker-sub">${totalQ} questions · ${sessionSize} per session · ${totalSections} session${totalSections!==1?'s':''}
         ${test.timerSeconds?` · ⏱ ${test.timerSeconds}s timer`:''}</div>
+
+      <!-- Settings row -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:18px 0 14px">
+        <!-- Custom session size -->
+        <div style="flex:1;min-width:140px">
+          <label class="fl" style="margin-bottom:6px"><i class="ti ti-list-numbers"></i> Questions per session</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <div class="count-chips" style="gap:5px">
+              ${[5,10,15,20].map(n=>`<button class="chip${sessionSize===n&&!customSize||customSize===n?' on':''}"
+                onclick="S.customSessionSize=${n};S.quizTestId='';S.quizQs=[];S.allQs=[];frame(pgQuiz('${test.id}'))"
+                style="font-size:.78rem;min-width:36px">${n}</button>`).join('')}
+            </div>
+            <input type="number" min="1" max="${totalQ}" placeholder="?" value="${customSize&&![5,10,15,20].includes(customSize)?customSize:''}"
+              style="width:56px;padding:6px 8px;background:var(--bg3);border:1.5px solid var(--border);
+              border-radius:10px;color:var(--text);font-size:.82rem;text-align:center"
+              oninput="const v=parseInt(this.value);if(v>0&&v<=${totalQ}){S.customSessionSize=v;S.quizTestId='';S.quizQs=[];S.allQs=[];frame(pgQuiz('${test.id}'))}">
+          </div>
+        </div>
+        <!-- Shuffle toggle -->
+        <div>
+          <label class="fl" style="margin-bottom:6px"><i class="ti ti-arrows-shuffle"></i> Shuffle</label>
+          <button onclick="S.quizShuffle=!S.quizShuffle;S.quizTestId='';S.quizQs=[];S.allQs=[];frame(pgQuiz('${test.id}'))"
+            style="display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:700;
+            border:1.5px solid ${doShuffle?'var(--accent)':'var(--border)'};
+            background:${doShuffle?'rgba(124,92,255,.15)':'var(--bg3)'};
+            color:${doShuffle?'var(--accent)':'var(--t2)'}">
+            <i class="ti ${doShuffle?'ti-checks':'ti-arrows-shuffle'}"></i>
+            ${doShuffle?'ON':'OFF'}
+          </button>
+        </div>
+      </div>
+
       <div class="sessions-list">${rows}</div>
-      <button class="btn btn-ghost btn-sm" onclick="go('${S.user?'/dashboard':'/login'}')"><i class="ti ti-arrow-left"></i> Back</button>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="go('${S.user?'/dashboard':'/login'}')"><i class="ti ti-arrow-left"></i> Back</button>
     </div>
   </div>`
 }
@@ -2334,10 +2371,10 @@ function pgResults(rawId){
         <div style="font-size:.8rem;color:var(--t3);margin-top:2px">${correct}/${total} correct · ${grade}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-secondary btn-sm" onclick="shareResultAsImage(${pct},'${esc(test.title)}',${correct},${total},'${emoji}')">
+        <button class="btn btn-secondary btn-sm" onclick="shareResultAsImage(${pct},'${escJs(test.title)}',${correct},${total},'${escJs(emoji)}')">
           <i class="ti ti-photo"></i> Share Image
         </button>
-        <button class="btn btn-secondary btn-sm" onclick="shareResult(${pct},'${esc(test.title)}',${correct},${total})">
+        <button class="btn btn-secondary btn-sm" onclick="shareResult(${pct},'${escJs(test.title)}',${correct},${total})">
           <i class="ti ti-clipboard"></i> Copy text
         </button>
       </div>
@@ -3619,8 +3656,10 @@ function openPublicTest(id){
 function startSession(testId,sectionIdx){
   const test=DB.tests().find(t=>t.id===testId);
   if(!test)return;
-  const sessionSize=test.sessionCount||10;
-  const all=test.questions.map(q=>({...q,options:shuffle(q.options)}));
+  const sessionSize=(S.customSessionSize&&S.customSessionSize>0)?S.customSessionSize:(test.sessionCount||10);
+  const doShuffle=S.quizShuffle||false;
+  let all=test.questions.map(q=>({...q,options:shuffle(q.options)}));
+  if(doShuffle) all=shuffle(all);
   S.allQs=all;S.sessionSize=sessionSize;S.sectionIdx=sectionIdx;
   S.quizTestId=testId;
   S.quizQs=all.slice(sectionIdx*sessionSize,(sectionIdx+1)*sessionSize);
