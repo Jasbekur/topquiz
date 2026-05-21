@@ -13,23 +13,29 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#09090F;--bg2:#0F1117;--bg3:#141820;
-  --card:#0F1117;--card2:#141820;--border:#1A2236;
-  --accent:#7C5CFF;--al:#9277FF;--ad:#6D4FE8;
-  --text:#F8FAFC;--t2:#94A3B8;--t3:#8094AA;
+  --bg:#070710;--bg2:#0D0E1A;--bg3:#13141F;
+  --card:#0D0E1A;--card2:#15172380;--border:#222539;
+  --accent:#7C5CFF;--al:#9D86FF;--ad:#6442E0;
+  --text:#F8FAFC;--t2:#A6B2C8;--t3:#7585A0;
   --ok:#22C55E;--err:#F43F5E;--warn:#FBBF24;
-  --glow:rgba(124,92,255,0.22);
+  --glow:rgba(124,92,255,0.25);
   --gold:#F59E0B;--gold2:#EF4444;
 }
 /* Light mode */
 body.light{
-  --bg:#F5F6FA;--bg2:#ECEEF4;--bg3:#E2E5EF;
-  --card:#FFFFFF;--card2:#F0F2F8;--border:#D4D8E8;
-  --text:#0F1117;--t2:#4A5568;--t3:#718096;
+  --bg:#F4F5FB;--bg2:#ECEEF6;--bg3:#E3E6F1;
+  --card:#FFFFFF;--card2:#F2F4FA;--border:#DADEEC;
+  --text:#0D0E1A;--t2:#475067;--t3:#6B7689;
   --glow:rgba(124,92,255,0.12);
 }
 html,body{height:100%;background:var(--bg);color:var(--text);
   font-family:'Satoshi',system-ui,sans-serif;font-size:16px;line-height:1.65;transition:background .25s,color .25s}
+/* Premium ambient glow behind everything */
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(800px circle at 15% -5%,rgba(124,92,255,.10),transparent 45%),
+             radial-gradient(700px circle at 100% 100%,rgba(99,102,241,.07),transparent 50%)}
+body.light::before{background:radial-gradient(800px circle at 15% -5%,rgba(124,92,255,.06),transparent 45%),
+             radial-gradient(700px circle at 100% 100%,rgba(99,102,241,.04),transparent 50%)}
 #app{min-height:100vh;display:flex;flex-direction:column}
 .clash{font-family:'Clash Display',system-ui,sans-serif}
 
@@ -84,10 +90,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   font-size:.875rem;font-weight:600;border:none;cursor:pointer;
   transition:all .22s cubic-bezier(.22,.68,0,1.2);text-decoration:none;white-space:nowrap;letter-spacing:.01em}
 .btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
-.btn-primary{background:linear-gradient(135deg,var(--accent),var(--ad));color:#fff;
-  box-shadow:0 2px 0 var(--ad)}
-.btn-primary:hover{background:linear-gradient(135deg,var(--al),var(--accent))}
-.btn-primary:active{transform:translateY(1px);box-shadow:none}
+.btn-primary{background:linear-gradient(135deg,var(--al),var(--ad));color:#fff;
+  box-shadow:0 4px 16px rgba(124,92,255,.35),0 1px 0 rgba(255,255,255,.12) inset}
+.btn-primary:hover{background:linear-gradient(135deg,#AC97FF,var(--accent));
+  box-shadow:0 6px 22px rgba(124,92,255,.5),0 1px 0 rgba(255,255,255,.18) inset;transform:translateY(-1px)}
+.btn-primary:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(124,92,255,.3)}
 .btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border)}
 .btn-secondary:hover{background:var(--border);border-color:#2d3f5a;transform:translateY(-1px)}
 .btn-danger{background:rgba(255,90,122,.1);color:var(--err);border:1px solid rgba(255,90,122,.25)}
@@ -1022,6 +1029,7 @@ const S = {
   browseSearch: '', browseTag: '',  // library search
   quizShuffle: false, customSessionSize: 0,  // quiz settings
   uploadShuffle: false,  // shuffle when saving test
+  lastResult: null,    // last quiz result for sharing
   dashTag: '',         // dashboard tag filter
   uploadTags: [],      // tags for current upload
   // ── GAME (Kahoot mode) ──
@@ -1795,7 +1803,7 @@ function pgDashboard(){
           onclick="createChallenge('${tst.id}')">${t('challengeBtn')}</button>
         <button class="btn btn-secondary btn-sm" onclick="go('/edit/${tst.id}')">${t('editAnswers')}</button>
         <button class="btn btn-secondary btn-sm" onclick="duplicateTest('${tst.id}')">${t('duplicate')}</button>
-        <button class="btn btn-danger btn-sm" onclick="confirmDel('${tst.id}','${esc(tst.title)}')">${t('delete')}</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDel('${tst.id}')">${t('delete')}</button>
       </div>
     </div>`;}).join('')}</div>`
   :`<div class="empty">
@@ -2339,6 +2347,10 @@ function pgResults(rawId){
   const rc2=pct>=70?'#34d399':pct>=50?'#fbbf24':'#f87171';
   const grade=pct>=90?'Excellent!':pct>=70?'Good job!':pct>=50?'Keep practicing':'Needs improvement';
   const emoji=pct>=90?'<i class="ti ti-trophy"></i>':pct>=70?'<i class="ti ti-target"></i>':pct>=40?'<i class="ti ti-mood-puzzled"></i>':'<i class="ti ti-mood-sad"></i>';
+  // Plain emoji (no HTML) for canvas image + share text
+  const plainEmoji=pct>=90?'🏆':pct>=70?'🎯':pct>=40?'🤔':'😓';
+  // Store result in state so share buttons need NO string args (avoids HTML-attribute escaping bugs)
+  S.lastResult={pct,title:test.title,correct,total,emoji:plainEmoji,grade};
 
   const hasNext=!S.isRetryWrong&&(S.sectionIdx+1)*S.sessionSize<S.allQs.length;
   const nextStart=(S.sectionIdx+1)*S.sessionSize+1;
@@ -2389,10 +2401,10 @@ function pgResults(rawId){
         <div style="font-size:.8rem;color:var(--t3);margin-top:2px">${correct}/${total} correct · ${grade}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-secondary btn-sm" onclick="shareResultAsImage(${pct},'${escJs(test.title)}',${correct},${total},'${escJs(emoji)}')">
+        <button class="btn btn-secondary btn-sm" onclick="shareResultAsImage()">
           <i class="ti ti-photo"></i> Share Image
         </button>
-        <button class="btn btn-secondary btn-sm" onclick="shareResult(${pct},'${escJs(test.title)}',${correct},${total})">
+        <button class="btn btn-secondary btn-sm" onclick="shareResult()">
           <i class="ti ti-clipboard"></i> Copy text
         </button>
       </div>
@@ -3132,7 +3144,7 @@ function editOptText(testId,qIdx,optIdx){
     <button class="btn btn-primary btn-sm" onclick="saveOptText('${testId}',${qIdx},${optIdx})">Save</button>
     <button class="btn btn-ghost btn-sm" onclick="restoreOpt('${testId}',${qIdx},${optIdx})"><i class="ti ti-x"></i></button>`;
   const inp=document.getElementById(`oti-${qIdx}-${optIdx}`);
-  if(inp){inp.focus();inp.select();}
+  if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
   inp?.addEventListener('keydown',e=>{
     if(e.key==='Enter')saveOptText(testId,qIdx,optIdx);
     if(e.key==='Escape')restoreOpt(testId,qIdx,optIdx);
@@ -3864,7 +3876,7 @@ function editParsedOptText(qIdx,optIdx){
     <button class="btn btn-primary btn-sm" onclick="saveParsedOptText(${qIdx},${optIdx})">Save</button>
     <button class="btn btn-ghost btn-sm" onclick="silentRenderUpload()"><i class="ti ti-x"></i></button>`;
   const inp=document.getElementById(`pqoi-${qIdx}-${optIdx}`);
-  if(inp){inp.focus();inp.select();}
+  if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}
   inp?.addEventListener('keydown',e=>{
     if(e.key==='Enter')saveParsedOptText(qIdx,optIdx);
     if(e.key==='Escape')silentRenderUpload();
@@ -4134,10 +4146,10 @@ function launchConfetti(){
 }
 
 // ── MODAL / UI ─────────────────────────────────────────────────────────────
-function shareResult(pct,title,correct,total){
-  const grade=pct>=90?'Excellent':pct>=70?'Good job':pct>=50?'Keep practicing':'Needs improvement';
-  const emoji=pct>=90?'🏆':pct>=70?'🎯':pct>=40?'🤔':'😓';
-  const txt=`${emoji} I scored ${pct}% on "${title}" — ${correct}/${total} correct! (${grade})\n\nTry it yourself on TopQuiz`;
+function shareResult(){
+  const r=S.lastResult;
+  if(!r){toast('No result to share','err');return;}
+  const txt=`${r.emoji} I scored ${r.pct}% on "${r.title}" — ${r.correct}/${r.total} correct! (${r.grade})\n\nTry it yourself on TopQuiz`;
   navigator.clipboard.writeText(txt).then(()=>toast('Result copied — share it! 🚀')).catch(()=>toast(txt));
 }
 
@@ -4153,8 +4165,9 @@ function duplicateTest(id){
   frame(pgDashboard());
 }
 
-function confirmDel(id,title){
-  modal('Delete Test',`Delete "${title}"? This cannot be undone.`,
+function confirmDel(id){
+  const title=DB.tests().find(t=>t.id===id)?.title||'this test';
+  modal('Delete Test',`Delete "${esc(title)}"? This cannot be undone.`,
     ()=>{DB.setTests(DB.tests().filter(t=>t.id!==id));toast('Deleted');frame(pgDashboard())},true);
 }
 function modal(title,body,onOk,danger=false){
@@ -4905,7 +4918,7 @@ function pgFlashcards(){
             ${tab==='browse'?t('study'):t('study')}
           </button>
           ${tab==='browse'?`<button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();copyFcDeck('${d.id}')">${t('copyDeck')}</button>`
-            :`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteFcDeck('${d.id}','${esc(d.name)}')">Delete</button>`}
+            :`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteFcDeck('${d.id}')">Delete</button>`}
         </div>
       </div>`).join('')}</div>`
     :`<div class="empty">
@@ -5240,8 +5253,9 @@ function deleteFcCard(deckId,idx){
   deck.cards.splice(idx,1);DB.setFcDecks(decks);
   frame(pgFlashcardDeck(deckId));toast('Card deleted');
 }
-function deleteFcDeck(id,name){
-  modal('Delete Deck',`Delete "${name}" and all its cards? Cannot be undone.`,()=>{
+function deleteFcDeck(id){
+  const name=DB.fcDecks().find(d=>d.id===id)?.name||'this deck';
+  modal('Delete Deck',`Delete "${esc(name)}" and all its cards? Cannot be undone.`,()=>{
     DB.setFcDecks(DB.fcDecks().filter(d=>d.id!==id));
     toast('Deck deleted');frame(pgFlashcards());
   },true);
@@ -5413,7 +5427,10 @@ function showKeyboardShortcuts(){
 }
 
 // ── SHARE AS IMAGE (Canvas) ──────────────────────────────────────────────────
-function shareResultAsImage(pct,title,correct,total,emoji){
+function shareResultAsImage(){
+  const r=S.lastResult;
+  if(!r){toast('No result to share','err');return;}
+  const {pct,title,correct,total,emoji}=r;
   try{
     const canvas=document.createElement('canvas');
     canvas.width=800;canvas.height=440;
@@ -5450,13 +5467,13 @@ function shareResultAsImage(pct,title,correct,total,emoji){
     // Download / share
     canvas.toBlob(async blob=>{
       try{
-        const file=new File([blob],'quizchi-score.png',{type:'image/png'});
+        const file=new File([blob],'topquiz-score.png',{type:'image/png'});
         if(navigator.share&&navigator.canShare({files:[file]})){
           await navigator.share({files:[file],title:'My TopQuiz Score',text:`I scored ${pct}% on "${title}"!`});
         }else{
           const a=document.createElement('a');
           a.href=URL.createObjectURL(blob);
-          a.download='quizchi-score.png';a.click();
+          a.download='topquiz-score.png';a.click();
           toast('Score card saved! 🖼️');
         }
       }catch(e){if(e.name!=='AbortError')toast('Download ready','ok');}
