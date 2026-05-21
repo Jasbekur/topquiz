@@ -1021,6 +1021,7 @@ const S = {
   dashSearch: '',      // dashboard search query
   browseSearch: '', browseTag: '',  // library search
   quizShuffle: false, customSessionSize: 0,  // quiz settings
+  uploadShuffle: false,  // shuffle when saving test
   dashTag: '',         // dashboard tag filter
   uploadTags: [],      // tags for current upload
   // ── GAME (Kahoot mode) ──
@@ -2068,13 +2069,30 @@ Next question...</pre>
         </div>
       </div>
 
-      <!-- QUESTIONS PER SESSION -->
+      <!-- QUESTIONS PER SESSION + SHUFFLE -->
       <div style="margin-bottom:20px">
-        <label class="fl">${t('qPerSession')}</label>
-        <div class="count-chips">
-          ${allCounts.map(n=>`<button class="chip${sel===n?' on':''}" onclick="setCount(${n})">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+          <label class="fl" style="margin:0">${t('qPerSession')}</label>
+          <!-- Shuffle toggle -->
+          <button onclick="S.uploadShuffle=!S.uploadShuffle;frame(pgUpload())"
+            style="display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:10px;cursor:pointer;
+            font-size:.78rem;font-weight:700;
+            border:1.5px solid ${S.uploadShuffle?'var(--accent)':'var(--border)'};
+            background:${S.uploadShuffle?'rgba(124,92,255,.15)':'var(--bg3)'};
+            color:${S.uploadShuffle?'var(--accent)':'var(--t2)'}">
+            <i class="ti ${S.uploadShuffle?'ti-checks':'ti-arrows-shuffle'}"></i>
+            Shuffle: ${S.uploadShuffle?'ON':'OFF'}
+          </button>
+        </div>
+        <div class="count-chips" style="align-items:center">
+          ${allCounts.map(n=>`<button class="chip${sel===n?' on':''}" onclick="setCount(${n});document.getElementById('custom-count-input').value=''">
             ${n===total?`All (${total})`:n}
           </button>`).join('')}
+          <input id="custom-count-input" type="number" min="1" max="${total}" placeholder="Custom"
+            value="${sel&&![...allCounts].includes(sel)?sel:''}"
+            style="width:72px;padding:7px 10px;background:var(--bg3);border:1.5px solid ${![...allCounts].includes(sel)&&sel?'var(--accent)':'var(--border)'};
+            border-radius:10px;color:var(--text);font-size:.82rem;text-align:center"
+            oninput="const v=parseInt(this.value);if(v>=1&&v<=${total}){S.selectedCount=v;document.querySelectorAll('.count-chips .chip').forEach(b=>b.classList.remove('on'))}">
         </div>
       </div>
 
@@ -3632,13 +3650,14 @@ function saveTest(){
   const emoji=(document.getElementById('temoji')?.value||'📋').trim()||'📋';
   const rawTags=(document.getElementById('ttags')?.value||'');
   const tags=rawTags.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  const shuffleByDefault=S.uploadShuffle||false;
   const test={id:uid(),shareId:uid(8),title,creatorId:S.user.id,
-    questions:S.parsedQs,sessionCount:count,timerSeconds,isPublic,emoji,tags,at:Date.now()};
+    questions:S.parsedQs,sessionCount:count,timerSeconds,isPublic,emoji,tags,shuffleByDefault,at:Date.now()};
   const ts=DB.tests();ts.push(test);DB.setTests(ts);
   // Also save to Firebase so others can find by share ID
   fbSet('tests/'+test.shareId, test).catch(()=>{});
   S.parsedQs=[];S.parsedName='';S.selectedCount=0;S.builderOpen=false;
-  S.uploadTimer=0;S.uploadIsPublic=false;S.uploadTags=[];
+  S.uploadTimer=0;S.uploadIsPublic=false;S.uploadTags=[];S.uploadShuffle=false;
   toast(`"${title}" saved!${isPublic?' Published to library.':''}`);
   go('/dashboard');
 }
@@ -3657,7 +3676,8 @@ function startSession(testId,sectionIdx){
   const test=DB.tests().find(t=>t.id===testId);
   if(!test)return;
   const sessionSize=(S.customSessionSize&&S.customSessionSize>0)?S.customSessionSize:(test.sessionCount||10);
-  const doShuffle=S.quizShuffle||false;
+  // Use quiz-time shuffle toggle; fall back to test's saved shuffleByDefault
+  const doShuffle=S.quizShuffle!=null?S.quizShuffle:(test.shuffleByDefault||false);
   let all=test.questions.map(q=>({...q,options:shuffle(q.options)}));
   if(doShuffle) all=shuffle(all);
   S.allQs=all;S.sessionSize=sessionSize;S.sectionIdx=sectionIdx;
