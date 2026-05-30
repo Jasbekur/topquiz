@@ -21,43 +21,45 @@
   --glow:rgba(124,92,255,0.25);
   --gold:#F59E0B;--gold2:#EF4444;
 }
-/* Light mode */
-body.light{
+/* Light mode — applied to <html> so :root variables propagate everywhere */
+html.light{
   --bg:#F4F5FB;--bg2:#ECEEF6;--bg3:#E3E6F1;
   --card:#FFFFFF;--card2:#F2F4FA;--border:#DADEEC;
   --text:#0D0E1A;--t2:#475067;--t3:#6B7689;
   --glow:rgba(124,92,255,0.12);
 }
-html,body{height:100%;background:var(--bg);color:var(--text);
+html,body{min-height:100%;background:var(--bg);color:var(--text);
   font-family:'Satoshi',system-ui,sans-serif;font-size:16px;line-height:1.65;transition:background .25s,color .25s}
+html{height:auto}
+body{min-height:100vh}
 /* Premium ambient glow behind everything */
 body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:radial-gradient(800px circle at 15% -5%,rgba(124,92,255,.10),transparent 45%),
              radial-gradient(700px circle at 100% 100%,rgba(99,102,241,.07),transparent 50%)}
-body.light::before{background:radial-gradient(800px circle at 15% -5%,rgba(124,92,255,.06),transparent 45%),
+html.light body::before{background:radial-gradient(800px circle at 15% -5%,rgba(124,92,255,.06),transparent 45%),
              radial-gradient(700px circle at 100% 100%,rgba(99,102,241,.04),transparent 50%)}
 
 /* ── Theme toggle pill ────────────────────────────────────────────────── */
-.theme-pill{position:relative;display:inline-flex;align-items:center;width:54px;height:28px;
-  background:var(--bg3);border:1.5px solid var(--border);border-radius:999px;cursor:pointer;
-  padding:2px;transition:background .22s,border-color .22s;flex-shrink:0}
+.theme-pill{position:relative;display:inline-flex;align-items:center;justify-content:space-between;
+  width:60px;height:30px;background:var(--bg3);border:1.5px solid var(--border);border-radius:999px;
+  cursor:pointer;padding:0 6px;transition:background .22s,border-color .22s;flex-shrink:0;
+  vertical-align:middle;box-shadow:0 1px 3px rgba(0,0,0,.08) inset}
 .theme-pill:hover{border-color:var(--accent)}
-.theme-pill-knob{position:absolute;top:1px;left:1px;width:22px;height:22px;border-radius:50%;
+.theme-pill-knob{position:absolute;top:50%;left:2px;width:24px;height:24px;border-radius:50%;
   background:linear-gradient(135deg,var(--al),var(--ad));color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:.78rem;
+  display:flex;align-items:center;justify-content:center;font-size:.82rem;
   box-shadow:0 2px 8px rgba(124,92,255,.4);
-  transition:transform .28s cubic-bezier(.22,.68,0,1.2)}
-.theme-pill.is-light .theme-pill-knob{transform:translateX(26px);
-  background:linear-gradient(135deg,#FBBF24,#F59E0B);box-shadow:0 2px 8px rgba(251,191,36,.4)}
-.theme-pill-ico-l,.theme-pill-ico-r{font-size:.7rem;color:var(--t3);opacity:.55;pointer-events:none}
-.theme-pill-ico-l{margin-left:5px}
-.theme-pill-ico-r{margin-left:auto;margin-right:5px}
-.theme-pill.is-dark .theme-pill-ico-r{opacity:0}
-.theme-pill.is-light .theme-pill-ico-l{opacity:0}
+  transition:transform .28s cubic-bezier(.22,.68,0,1.2),background .22s;
+  transform:translateY(-50%)}
+.theme-pill.is-light .theme-pill-knob{transform:translate(30px,-50%);
+  background:linear-gradient(135deg,#FBBF24,#F59E0B);box-shadow:0 2px 8px rgba(251,191,36,.45)}
+.theme-pill-ico-l,.theme-pill-ico-r{font-size:.72rem;color:var(--t3);opacity:.55;pointer-events:none;line-height:1}
+.theme-pill.is-dark .theme-pill-ico-l{opacity:0}
+.theme-pill.is-light .theme-pill-ico-r{opacity:0}
 @media(max-width:400px){
-  .theme-pill{width:46px;height:24px}
-  .theme-pill-knob{width:18px;height:18px;font-size:.68rem}
-  .theme-pill.is-light .theme-pill-knob{transform:translateX(22px)}
+  .theme-pill{width:50px;height:26px;padding:0 5px}
+  .theme-pill-knob{width:20px;height:20px;font-size:.72rem}
+  .theme-pill.is-light .theme-pill-knob{transform:translate(24px,-50%)}
 }
 #app{min-height:100vh;display:flex;flex-direction:column}
 .clash{font-family:'Clash Display',system-ui,sans-serif}
@@ -1524,7 +1526,10 @@ function paint(html){
   bind();
 }
 function toggleTheme(){
-  const goingLight=!document.body.classList.contains('light');
+  const html=document.documentElement;
+  const goingLight=!html.classList.contains('light');
+  html.classList.toggle('light', goingLight);
+  // Mirror on body for any legacy selectors
   document.body.classList.toggle('light', goingLight);
   localStorage.setItem('qh_theme', goingLight?'light':'dark');
   // Update browser status-bar color
@@ -1534,8 +1539,13 @@ function toggleTheme(){
   route();
 }
 (()=>{
-  if(localStorage.getItem('qh_theme')==='light'){
-    document.body.classList.add('light');
+  const saved=localStorage.getItem('qh_theme');
+  // Default: respect user's OS preference if no saved choice
+  const prefersLight=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches;
+  const useLight=saved?saved==='light':prefersLight;
+  if(useLight){
+    document.documentElement.classList.add('light');
+    document.body&&document.body.classList.add('light');
     const meta=document.querySelector('meta[name="theme-color"]');
     if(meta) meta.setAttribute('content','#F4F5FB');
   }
@@ -1543,11 +1553,11 @@ function toggleTheme(){
 
 // Reusable theme-toggle pill (used in every nav)
 function themeToggle(){
-  const isLight=document.body.classList.contains('light');
-  return `<button onclick="toggleTheme()" title="Toggle ${isLight?'dark':'light'} mode" class="theme-pill ${isLight?'is-light':'is-dark'}">
+  const isLight=document.documentElement.classList.contains('light');
+  return `<button onclick="toggleTheme()" title="Toggle ${isLight?'dark':'light'} mode" class="theme-pill ${isLight?'is-light':'is-dark'}" aria-label="Toggle theme">
     <span class="theme-pill-knob"><i class="ti ${isLight?'ti-sun':'ti-moon'}"></i></span>
-    <i class="ti ti-sun theme-pill-ico-l"></i>
-    <i class="ti ti-moon theme-pill-ico-r"></i>
+    <i class="ti ti-moon theme-pill-ico-l"></i>
+    <i class="ti ti-sun theme-pill-ico-r"></i>
   </button>`;
 }
 
