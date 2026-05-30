@@ -36,6 +36,29 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
              radial-gradient(700px circle at 100% 100%,rgba(99,102,241,.07),transparent 50%)}
 body.light::before{background:radial-gradient(800px circle at 15% -5%,rgba(124,92,255,.06),transparent 45%),
              radial-gradient(700px circle at 100% 100%,rgba(99,102,241,.04),transparent 50%)}
+
+/* ── Theme toggle pill ────────────────────────────────────────────────── */
+.theme-pill{position:relative;display:inline-flex;align-items:center;width:54px;height:28px;
+  background:var(--bg3);border:1.5px solid var(--border);border-radius:999px;cursor:pointer;
+  padding:2px;transition:background .22s,border-color .22s;flex-shrink:0}
+.theme-pill:hover{border-color:var(--accent)}
+.theme-pill-knob{position:absolute;top:1px;left:1px;width:22px;height:22px;border-radius:50%;
+  background:linear-gradient(135deg,var(--al),var(--ad));color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:.78rem;
+  box-shadow:0 2px 8px rgba(124,92,255,.4);
+  transition:transform .28s cubic-bezier(.22,.68,0,1.2)}
+.theme-pill.is-light .theme-pill-knob{transform:translateX(26px);
+  background:linear-gradient(135deg,#FBBF24,#F59E0B);box-shadow:0 2px 8px rgba(251,191,36,.4)}
+.theme-pill-ico-l,.theme-pill-ico-r{font-size:.7rem;color:var(--t3);opacity:.55;pointer-events:none}
+.theme-pill-ico-l{margin-left:5px}
+.theme-pill-ico-r{margin-left:auto;margin-right:5px}
+.theme-pill.is-dark .theme-pill-ico-r{opacity:0}
+.theme-pill.is-light .theme-pill-ico-l{opacity:0}
+@media(max-width:400px){
+  .theme-pill{width:46px;height:24px}
+  .theme-pill-knob{width:18px;height:18px;font-size:.68rem}
+  .theme-pill.is-light .theme-pill-knob{transform:translateX(22px)}
+}
 #app{min-height:100vh;display:flex;flex-direction:column}
 .clash{font-family:'Clash Display',system-ui,sans-serif}
 
@@ -1501,10 +1524,32 @@ function paint(html){
   bind();
 }
 function toggleTheme(){
-  document.body.classList.toggle('light');
-  localStorage.setItem('qh_theme',document.body.classList.contains('light')?'light':'dark');
+  const goingLight=!document.body.classList.contains('light');
+  document.body.classList.toggle('light', goingLight);
+  localStorage.setItem('qh_theme', goingLight?'light':'dark');
+  // Update browser status-bar color
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', goingLight?'#F4F5FB':'#070710');
+  // Re-render current route so the toggle icon updates
+  route();
 }
-(()=>{if(localStorage.getItem('qh_theme')==='light')document.body.classList.add('light');})();
+(()=>{
+  if(localStorage.getItem('qh_theme')==='light'){
+    document.body.classList.add('light');
+    const meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content','#F4F5FB');
+  }
+})();
+
+// Reusable theme-toggle pill (used in every nav)
+function themeToggle(){
+  const isLight=document.body.classList.contains('light');
+  return `<button onclick="toggleTheme()" title="Toggle ${isLight?'dark':'light'} mode" class="theme-pill ${isLight?'is-light':'is-dark'}">
+    <span class="theme-pill-knob"><i class="ti ${isLight?'ti-sun':'ti-moon'}"></i></span>
+    <i class="ti ti-sun theme-pill-ico-l"></i>
+    <i class="ti ti-moon theme-pill-ico-r"></i>
+  </button>`;
+}
 
 function frame(content){
   const pg=S.page||'';
@@ -1519,10 +1564,7 @@ function frame(content){
         <button class="btn btn-sm" style="background:linear-gradient(135deg,#e21b3c,#4257b2);color:#fff;font-weight:700"
           onclick="go('/join')"><i class="ti ti-device-gamepad-2"></i> ${t('join')}</button>
         ${langPill()}
-        <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" title="Toggle theme"
-          style="width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;font-size:1rem;opacity:.8">
-          <i class="ti ${isLight?'ti-moon':'ti-sun'}"></i>
-        </button>
+        ${themeToggle()}
         ${S.user?`<button class="btn btn-secondary btn-sm" onclick="logout()">${t('signOut')}</button>`
           :`<button class="btn btn-secondary btn-sm" onclick="go('/login')">${t('signIn')}</button>`}
       </div>
@@ -1558,6 +1600,7 @@ function pgLanding(){
       <span class="nav-brand" style="font-size:1.4rem" onclick="go('/landing')">TopQuiz</span>
       <div class="nav-right">
         ${langPill()}
+        ${themeToggle()}
         <button class="btn btn-ghost btn-sm" onclick="go('/login')">${t('signIn')}</button>
         <button class="btn btn-primary btn-sm" onclick="go('/register')">${t('getStarted')}</button>
       </div>
@@ -1644,7 +1687,7 @@ function pgLogin(){
 <div class="auth-wrap" style="padding:16px 12px">
   <div class="auth-box" style="max-width:440px">
     <div class="auth-logo"><h1>TopQuiz</h1><p>${t('heroTitle').replace('<br>',' ')}</p></div>
-    <div style="display:flex;justify-content:center;margin-bottom:16px">${langPill()}</div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:16px">${langPill()} ${themeToggle()}</div>
     <div class="auth-card">
       <h2>${t('signInTitle')}</h2><p class="sub">${t('myTests')}</p>
       <div id="lerr"></div>
@@ -1703,7 +1746,7 @@ function pgRegister(){return`
 <div class="auth-wrap">
   <div class="auth-box">
     <div class="auth-logo"><h1>TopQuiz</h1><p>${t('joinThousands')}</p></div>
-    <div style="display:flex;justify-content:center;margin-bottom:16px">${langPill()}</div>
+    <div style="display:flex;justify-content:center;align-items:center;gap:10px;margin-bottom:16px">${langPill()} ${themeToggle()}</div>
     <div class="auth-card">
       <h2>${t('registerTitle')}</h2><p class="sub">${t('getStarted')}</p>
       <div id="rerr"></div>
