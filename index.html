@@ -305,29 +305,34 @@ select.fi{cursor:pointer}
 
 .opt{display:flex;align-items:center;gap:14px;padding:16px 20px;min-height:52px;
   background:var(--bg3);border:1.5px solid var(--border);border-radius:14px;
-  cursor:pointer;transition:all .2s cubic-bezier(.22,.68,0,1.2);user-select:none}
-.opt:hover{border-color:var(--accent);background:rgba(124,92,255,.08);
-  transform:translateX(3px);box-shadow:0 0 20px var(--glow)}
+  cursor:pointer;transition:border-color .25s ease,background-color .25s ease,box-shadow .35s ease;
+  user-select:none;will-change:border-color,background-color,box-shadow}
+.opt:hover{border-color:var(--accent);background:rgba(124,92,255,.08)}
 .opt.sel{border-color:var(--accent);background:rgba(124,92,255,.12);
-  box-shadow:0 0 24px var(--glow)}
+  box-shadow:0 0 20px var(--glow)}
 .opt-mark{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);
   display:flex;align-items:center;justify-content:center;font-size:.78rem;
-  font-weight:800;flex-shrink:0;transition:all .2s;color:var(--t3)}
-.opt.sel .opt-mark{background:var(--accent);border-color:var(--accent);color:#fff;
-  box-shadow:0 0 12px rgba(124,92,255,.5)}
+  font-weight:800;flex-shrink:0;transition:background-color .25s ease,border-color .25s ease,color .25s ease;color:var(--t3)}
+.opt.sel .opt-mark{background:var(--accent);border-color:var(--accent);color:#fff}
 .opt-txt{font-size:1rem;font-weight:500;flex:1;line-height:1.4}
 
 .opt.locked{pointer-events:none;cursor:default}
+/* Pleasant, gentle reveal — color + glow fade only, no scaling/bouncing */
+@keyframes optGlowOk{from{box-shadow:0 0 0 rgba(34,197,94,0)}to{box-shadow:0 0 28px rgba(34,197,94,.28)}}
+@keyframes optGlowErr{from{box-shadow:0 0 0 rgba(244,63,94,0)}to{box-shadow:0 0 28px rgba(244,63,94,.22)}}
 .opt.ans-correct{border-color:var(--ok)!important;
-  background:rgba(34,197,94,.1)!important;animation:popIn .25s ease;
-  box-shadow:0 0 20px rgba(34,197,94,.2)!important}
+  background:rgba(34,197,94,.1)!important;
+  animation:optGlowOk .45s ease forwards;transition:border-color .3s ease,background-color .3s ease}
 .opt.ans-correct .opt-mark{background:var(--ok)!important;border-color:var(--ok)!important;color:#fff!important}
 .opt.ans-wrong{border-color:var(--err)!important;
-  background:rgba(255,90,122,.08)!important;animation:popIn .25s ease;
-  box-shadow:0 0 20px rgba(255,90,122,.15)!important}
+  background:rgba(244,63,94,.08)!important;
+  animation:optGlowErr .45s ease forwards;transition:border-color .3s ease,background-color .3s ease}
 .opt.ans-wrong .opt-mark{background:var(--err)!important;border-color:var(--err)!important;color:#fff!important}
-.opt.ans-reveal{border-color:rgba(34,197,94,.5)!important;background:rgba(34,197,94,.06)!important}
+.opt.ans-reveal{border-color:rgba(34,197,94,.5)!important;background:rgba(34,197,94,.06)!important;transition:border-color .3s ease,background-color .3s ease}
 .opt.ans-reveal .opt-mark{border-color:var(--ok)!important;color:var(--ok)!important}
+@media (prefers-reduced-motion: reduce){
+  .opt,.opt:hover,.opt.sel,.opt.ans-correct,.opt.ans-wrong{animation:none!important;transition:background-color .15s ease,border-color .15s ease!important}
+}
 
 .feedback-badge{display:inline-flex;align-items:center;gap:7px;margin-top:16px;
   padding:9px 16px;border-radius:12px;font-size:.875rem;font-weight:600}
@@ -1495,11 +1500,15 @@ function route(){
   if(p==='host-game'&&parts[1]){frame(pgHostGame(parts[1]));return}
   if(p==='play'&&parts[1]&&parts[2]){frame(pgPlay(parts[1],parts[2]));return}
   if(p==='test'&&parts[1]){
-    // Support both internal id and shareId in URL
     const rawId=parts[1];
-    const byShare=DB.tests().find(tt=>tt.shareId===rawId.toUpperCase());
+    const allTests=DB.tests();
+    // 1. First try direct internal id match (most common — including mid-quiz language toggles)
+    const byId=allTests.find(tt=>tt.id===rawId);
+    if(byId){frame(pgQuiz(byId.id));return;}
+    // 2. Try shareId (8-char uppercase code)
+    const byShare=allTests.find(tt=>tt.shareId===rawId.toUpperCase());
     if(byShare){frame(pgQuiz(byShare.id));return;}
-    // If not found locally, try Firebase then render
+    // 3. Not found locally — fetch from Firebase (only for 8-char share codes)
     if(rawId.length===8&&rawId===rawId.toUpperCase()){
       paint(`<div style="text-align:center;padding:80px 24px;color:var(--t3)">
         <div style="font-size:2.5rem;margin-bottom:14px"><i class="ti ti-loader" style="animation:spin 1s linear infinite"></i></div>
