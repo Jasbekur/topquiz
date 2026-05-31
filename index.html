@@ -8,6 +8,8 @@
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700,900&f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.9.0/dist/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
@@ -1044,10 +1046,14 @@ const S = {
   aiGenLoading: false, // AI generator loading state
   aiQuestionCount: 10, // How many questions to generate
   aiMode: 'quiz',       // 'quiz' or 'fc' (flashcard)
-  aiInputMode: 'topic', // 'topic' | 'paste_qa' | 'article'
+  aiInputMode: 'topic', // 'topic' | 'paste_qa' | 'article' | 'file'
   aiTopicPrompt: '',    // last typed topic/prompt
   aiPasteQA: '',        // raw pasted Q&A text
   aiArticleText: '',    // pasted article text
+  aiFileText: '',       // extracted text from uploaded file(s)
+  aiFileNames: [],      // names of uploaded files for display
+  aiDescription: '',    // optional user instructions/hints for King AI
+  aiDifficulty: 'mixed', // 'easy' | 'mixed' | 'hard'
   aiGeneratedCards: [], // AI-generated flashcard pairs (for preview)
   fcDeckId: null,      // flashcard deck being studied
   fcIdx: 0,            // current card index
@@ -1150,6 +1156,20 @@ const TRANS = {
     lastScore:"Oxirgi", beatIt:"Yaxshilang!", perfect:"Mukammal!",
     dueReview:"ta takrorlash kerak", sectionOf:"dan", retryWrong:"Xatolarni qayta",
     allSessions:"Barcha sessiya", sessionOf:"sessiya",
+    // quiz / session UI
+    questionsLabel:"ta savol", questionsPerSession:"Seans uchun savollar",
+    sessions:"ta sessiya", session:"ta sessiya", sessionShort:"Sessiya",
+    questionsRange:"Savollar", timerLabel:"Taymer", shuffleLabel:"Aralash",
+    shuffleOn:"YOQILGAN", shuffleOff:"O'CHIQ", customLabel:"Qancha?",
+    backBtn:"Orqaga", questionN:"Savol", previousBtn:"Oldingi", nextBtn:"Keyingi",
+    submitQuiz:"Testni topshirish", correctMsg:"To'g'ri!",
+    wrongMsg:"Noto'g'ri — to'g'ri javob ko'rsatilgan",
+    timesUp:"Vaqt tugadi — to'g'ri javob ko'rsatilgan",
+    explanationLbl:"Izoh", timerEmoji:"Vaqt",
+    sectionLbl:"Bo'lim", sectionsOf:"dan", retryWrongN:"ta xato javobni qaytarish",
+    questionsTotal:"ta savol jami", nextSection:"Keyingi bo'lim",
+    nextQRange:"Keyingisi", allCompleteMsg:"Barcha bo'limlar tugatildi",
+    retrySection:"Bo'limni qaytarish", goHomeBtn:"Bosh sahifa",
     // browse
     publicTestsAvail:"ta ochiq test mavjud", noPublicTests:"Hali ochiq testlar yo'q",
     noPublicHint:"Yaratuvchilar testlarini ochiq qilsa, bu yerda ko'rinadi",
@@ -1173,6 +1193,17 @@ const TRANS = {
     aiByTopic:"Mavzu yoz", aiByTopicSub:"AI o'zi qidiradi",
     aiPasteQ:"Savollar joylashtir", aiPasteQSub:"A) B) C) D) formatda",
     aiFromText:"Matn joylashtir", aiFromTextSub:"Maqola / konspekt",
+    aiFromFile:"Fayl yuklash",
+    aiFileLabel:"Fayllar yuklang (PDF, DOCX, TXT, MD, CSV)",
+    aiDropFiles:"Fayllarni shu yerga tashlang yoki bosing",
+    aiFileFormats:"PDF · DOCX · TXT · MD · CSV · JSON",
+    aiMultiple:"bir nechta fayl mumkin",
+    aiCharsExtracted:"belgi tahlil qilindi",
+    aiDescLabel:"King AI uchun qo'shimcha ko'rsatma",
+    aiOptional:"(majburiy emas)",
+    aiDescPh:"Masalan: \"Faqat ta'riflarga e'tibor ber, savollarni qiyin qil, o'zbek tilida yoz, sanalarni o'tkazib yubor\"",
+    aiDifficulty:"Qiyinlik",
+    aiEasy:"Oson", aiMixed:"Aralash", aiHard:"Qiyin",
     aiTopicLabelQ:"Savollar mavzusini yozing", aiTopicLabelFc:"Kartochkalar mavzusini yozing",
     aiTopicPhQ:"Masalan: O'zbekiston iqtisodiyoti 2010-2026, Biologiya, Algebra…",
     aiTopicPhFc:"Masalan: Python asoslari, Ingliz fe'llari, Geografiya…",
@@ -1238,6 +1269,20 @@ const TRANS = {
     rename:"Переименовать", hostGameBtn:'<i class="ti ti-device-gamepad-2"></i> Начать игру',
     challengeBtn:'<i class="ti ti-sword"></i> Вызов', questionsCount:"вопросов",
     perSession:"за сеанс", timerSuffix:"с таймер", dayStreak:"дн. подряд",
+    // quiz / session UI
+    questionsLabel:"вопросов", questionsPerSession:"Вопросов за сеанс",
+    sessions:"сессий", session:"сессия", sessionShort:"Сессия",
+    questionsRange:"Вопросы", timerLabel:"Таймер", shuffleLabel:"Перемешать",
+    shuffleOn:"ВКЛ", shuffleOff:"ВЫКЛ", customLabel:"Сколько?",
+    backBtn:"Назад", questionN:"Вопрос", previousBtn:"Назад", nextBtn:"Далее",
+    submitQuiz:"Завершить тест", correctMsg:"Правильно!",
+    wrongMsg:"Неправильно — правильный ответ подсвечен",
+    timesUp:"Время вышло — правильный ответ подсвечен",
+    explanationLbl:"Пояснение", timerEmoji:"Время",
+    sectionLbl:"Раздел", sectionsOf:"из", retryWrongN:"повторение ошибок",
+    questionsTotal:"вопросов всего", nextSection:"Следующий раздел",
+    nextQRange:"Далее", allCompleteMsg:"Все разделы пройдены",
+    retrySection:"Повторить раздел", goHomeBtn:"На главную",
     streakMsg:"Вы учились вчера — продолжайте!", searchTests:"🔍 Поиск тестов…",
     lastScore:"Последний", beatIt:"Улучшить!", perfect:"Отлично!",
     dueReview:"к повторению", sectionOf:"из", retryWrong:"Повторить ошибки",
@@ -1265,6 +1310,17 @@ const TRANS = {
     aiByTopic:"Введите тему", aiByTopicSub:"AI найдёт сам",
     aiPasteQ:"Вставить вопросы", aiPasteQSub:"Формат A) B) C) D)",
     aiFromText:"Вставить текст", aiFromTextSub:"Статья / конспект",
+    aiFromFile:"Загрузить файл",
+    aiFileLabel:"Загрузите файлы (PDF, DOCX, TXT, MD, CSV)",
+    aiDropFiles:"Перетащите файлы сюда или нажмите",
+    aiFileFormats:"PDF · DOCX · TXT · MD · CSV · JSON",
+    aiMultiple:"можно несколько файлов",
+    aiCharsExtracted:"символов извлечено",
+    aiDescLabel:"Дополнительные инструкции для King AI",
+    aiOptional:"(необязательно)",
+    aiDescPh:"Например: \"Сфокусируйся на определениях, сделай вопросы сложными, пиши на русском, пропусти даты\"",
+    aiDifficulty:"Сложность",
+    aiEasy:"Легко", aiMixed:"Смешанная", aiHard:"Сложно",
     aiTopicLabelQ:"Введите тему вопросов", aiTopicLabelFc:"Введите тему карточек",
     aiTopicPhQ:"Напр: Экономика Узбекистана 2010-2026, Биология, Алгебра…",
     aiTopicPhFc:"Напр: Основы Python, Английские глаголы, География…",
@@ -1330,6 +1386,20 @@ const TRANS = {
     rename:"Rename", hostGameBtn:'<i class="ti ti-device-gamepad-2"></i> Host Game',
     challengeBtn:'<i class="ti ti-sword"></i> Challenge', questionsCount:"questions",
     perSession:"per session", timerSuffix:"s timer", dayStreak:"day streak",
+    // quiz / session UI
+    questionsLabel:"questions", questionsPerSession:"Questions per session",
+    sessions:"sessions", session:"session", sessionShort:"Session",
+    questionsRange:"Questions", timerLabel:"Timer", shuffleLabel:"Shuffle",
+    shuffleOn:"ON", shuffleOff:"OFF", customLabel:"Custom?",
+    backBtn:"Back", questionN:"Question", previousBtn:"Previous", nextBtn:"Next",
+    submitQuiz:"Submit Quiz", correctMsg:"Correct!",
+    wrongMsg:"Wrong — correct answer highlighted",
+    timesUp:"Time's up — correct answer highlighted",
+    explanationLbl:"Explanation", timerEmoji:"Timer",
+    sectionLbl:"Section", sectionsOf:"of", retryWrongN:"wrong answers retry",
+    questionsTotal:"questions total", nextSection:"Next Section",
+    nextQRange:"Next", allCompleteMsg:"All sections complete",
+    retrySection:"Retry Section", goHomeBtn:"Go Home",
     streakMsg:"You studied yesterday — keep it going!", searchTests:"🔍 Search tests…",
     lastScore:"Last", beatIt:"Beat it!", perfect:"Perfect!",
     dueReview:"due for review", sectionOf:"of", retryWrong:"Retry wrong",
@@ -1357,6 +1427,17 @@ const TRANS = {
     aiByTopic:"Enter topic", aiByTopicSub:"AI generates",
     aiPasteQ:"Paste Q&A", aiPasteQSub:"A) B) C) D) format",
     aiFromText:"Paste text", aiFromTextSub:"Article / notes",
+    aiFromFile:"Upload Files",
+    aiFileLabel:"Upload files (PDF, DOCX, TXT, MD, CSV)",
+    aiDropFiles:"Drop files here or click to browse",
+    aiFileFormats:"PDF · DOCX · TXT · MD · CSV · JSON",
+    aiMultiple:"multiple files OK",
+    aiCharsExtracted:"characters extracted",
+    aiDescLabel:"Optional instructions for King AI",
+    aiOptional:"(optional)",
+    aiDescPh:"e.g. \"Focus on definitions, make questions challenging, use Uzbek language, avoid dates\"",
+    aiDifficulty:"Difficulty",
+    aiEasy:"Easy", aiMixed:"Mixed", aiHard:"Hard",
     aiTopicLabelQ:"Describe the quiz topic", aiTopicLabelFc:"Describe the flashcard topic",
     aiTopicPhQ:"E.g. Uzbekistan economy 2010-2026, Biology cells, Algebra…",
     aiTopicPhFc:"E.g. Python basics, English verbs, World Geography…",
@@ -1992,30 +2073,35 @@ Next question...</pre>
       ${S.aiMode!=='fc'?`
       <div style="margin-bottom:16px">
         <div style="font-size:.72rem;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${t('aiHowTo')}</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-          <button onclick="S.aiInputMode='topic';frame(pgUpload())" style="padding:10px 6px;border:2px solid ${S.aiInputMode==='topic'?'var(--accent)':'var(--border)'};
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+          <button onclick="S.aiInputMode='topic';frame(pgUpload())" style="padding:10px 4px;border:2px solid ${S.aiInputMode==='topic'?'var(--accent)':'var(--border)'};
             border-radius:11px;background:${S.aiInputMode==='topic'?'rgba(124,92,255,.12)':'var(--bg3)'};
             color:${S.aiInputMode==='topic'?'var(--al)':'var(--t2)'};cursor:pointer;transition:all .2s;
-            font-size:.78rem;font-weight:700;line-height:1.4;text-align:center">
+            font-size:.74rem;font-weight:700;line-height:1.4;text-align:center">
             <div style="font-size:1.15rem;margin-bottom:4px"><i class="ti ti-world-search"></i></div>
             <div>${t('aiByTopic')}</div>
-            <div style="font-size:.65rem;opacity:.7;margin-top:2px">${t('aiByTopicSub')}</div>
           </button>
-          <button onclick="S.aiInputMode='paste_qa';frame(pgUpload())" style="padding:10px 6px;border:2px solid ${S.aiInputMode==='paste_qa'?'var(--accent)':'var(--border)'};
+          <button onclick="S.aiInputMode='paste_qa';frame(pgUpload())" style="padding:10px 4px;border:2px solid ${S.aiInputMode==='paste_qa'?'var(--accent)':'var(--border)'};
             border-radius:11px;background:${S.aiInputMode==='paste_qa'?'rgba(124,92,255,.12)':'var(--bg3)'};
             color:${S.aiInputMode==='paste_qa'?'var(--al)':'var(--t2)'};cursor:pointer;transition:all .2s;
-            font-size:.78rem;font-weight:700;line-height:1.4;text-align:center">
+            font-size:.74rem;font-weight:700;line-height:1.4;text-align:center">
             <div style="font-size:1.15rem;margin-bottom:4px"><i class="ti ti-clipboard-text"></i></div>
             <div>${t('aiPasteQ')}</div>
-            <div style="font-size:.65rem;opacity:.7;margin-top:2px">${t('aiPasteQSub')}</div>
           </button>
-          <button onclick="S.aiInputMode='article';frame(pgUpload())" style="padding:10px 6px;border:2px solid ${S.aiInputMode==='article'?'var(--accent)':'var(--border)'};
+          <button onclick="S.aiInputMode='article';frame(pgUpload())" style="padding:10px 4px;border:2px solid ${S.aiInputMode==='article'?'var(--accent)':'var(--border)'};
             border-radius:11px;background:${S.aiInputMode==='article'?'rgba(124,92,255,.12)':'var(--bg3)'};
             color:${S.aiInputMode==='article'?'var(--al)':'var(--t2)'};cursor:pointer;transition:all .2s;
-            font-size:.78rem;font-weight:700;line-height:1.4;text-align:center">
+            font-size:.74rem;font-weight:700;line-height:1.4;text-align:center">
             <div style="font-size:1.15rem;margin-bottom:4px"><i class="ti ti-article"></i></div>
             <div>${t('aiFromText')}</div>
-            <div style="font-size:.65rem;opacity:.7;margin-top:2px">${t('aiFromTextSub')}</div>
+          </button>
+          <button onclick="S.aiInputMode='file';frame(pgUpload())" style="padding:10px 4px;border:2px solid ${S.aiInputMode==='file'?'var(--accent)':'var(--border)'};
+            border-radius:11px;background:${S.aiInputMode==='file'?'rgba(124,92,255,.12)':'var(--bg3)'};
+            color:${S.aiInputMode==='file'?'var(--al)':'var(--t2)'};cursor:pointer;transition:all .2s;
+            font-size:.74rem;font-weight:700;line-height:1.4;text-align:center;position:relative">
+            <div style="position:absolute;top:4px;right:6px;font-size:.55rem;background:linear-gradient(135deg,var(--accent),var(--al));color:#fff;padding:1px 5px;border-radius:6px;font-weight:800;letter-spacing:.05em">NEW</div>
+            <div style="font-size:1.15rem;margin-bottom:4px"><i class="ti ti-file-upload"></i></div>
+            <div>${t('aiFromFile')||'Upload Files'}</div>
           </button>
         </div>
       </div>`:''}
@@ -2040,14 +2126,62 @@ Next question...</pre>
           <i class="ti ti-info-circle"></i> ${t('aiPasteQHint')}
         </div>
       </div>`
-      :`
+      :S.aiInputMode==='article'?`
       <div class="fg" style="margin-bottom:12px">
         <label class="fl" style="margin-bottom:6px">${t('aiArticleLabel')}</label>
         <textarea class="fi" id="ai-article" rows="7"
           placeholder="${t('aiArticlePh')}"
           style="resize:vertical;font-size:.88rem"
           oninput="S.aiArticleText=this.value">${esc(S.aiArticleText||'')}</textarea>
+      </div>`
+      :`
+      <!-- FILE UPLOAD mode -->
+      <div class="fg" style="margin-bottom:12px">
+        <label class="fl" style="margin-bottom:6px"><i class="ti ti-file-upload"></i> ${t('aiFileLabel')||'Upload files (PDF, DOCX, TXT, MD, CSV)'}</label>
+        <input type="file" id="ai-file-input" multiple
+          accept=".pdf,.docx,.txt,.md,.csv,.json,text/*"
+          style="display:none" onchange="handleAIFiles(event)">
+        <div onclick="document.getElementById('ai-file-input').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='rgba(124,92,255,.08)'"
+          ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--bg3)'"
+          ondrop="event.preventDefault();this.style.borderColor='var(--border)';this.style.background='var(--bg3)';handleAIFiles({target:{files:event.dataTransfer.files}})"
+          style="border:2px dashed var(--border);border-radius:14px;padding:28px 16px;text-align:center;cursor:pointer;background:var(--bg3);transition:all .2s">
+          <div style="font-size:2rem;margin-bottom:8px;color:var(--accent)"><i class="ti ti-cloud-upload"></i></div>
+          <div style="font-weight:700;color:var(--text);margin-bottom:4px">${t('aiDropFiles')||'Drop files here or click to browse'}</div>
+          <div style="font-size:.78rem;color:var(--t3)">${t('aiFileFormats')||'PDF · DOCX · TXT · MD · CSV · JSON'} — ${t('aiMultiple')||'multiple files OK'}</div>
+        </div>
+        ${(S.aiFileNames||[]).length?`<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+          ${S.aiFileNames.map((n,i)=>`<div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:.82rem">
+            <i class="ti ti-file-check" style="color:var(--ok)"></i>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(n)}</span>
+            <button onclick="removeAIFile(${i})" style="background:none;border:none;color:var(--t3);cursor:pointer;padding:2px 6px;border-radius:6px;font-size:.9rem"><i class="ti ti-x"></i></button>
+          </div>`).join('')}
+          <div style="font-size:.74rem;color:var(--t3);margin-top:2px">
+            <i class="ti ti-info-circle"></i> ${(S.aiFileText||'').length.toLocaleString()} ${t('aiCharsExtracted')||'characters extracted'}
+          </div>
+        </div>`:''}
       </div>`}
+
+      <!-- OPTIONAL DESCRIPTION / INSTRUCTIONS for King AI -->
+      <div class="fg" style="margin-bottom:14px">
+        <label class="fl" style="margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <i class="ti ti-message-2" style="color:var(--al)"></i>
+          ${t('aiDescLabel')||'Optional instructions for King AI'}
+          <span style="font-weight:400;font-size:.7rem;color:var(--t3);margin-left:4px">${t('aiOptional')||'(optional)'}</span>
+        </label>
+        <textarea class="fi" id="ai-description" rows="2"
+          placeholder="${t('aiDescPh')||'e.g. \"Focus on definitions, make questions challenging, use Uzbek language, avoid dates\"'}"
+          style="resize:vertical;font-size:.85rem"
+          oninput="S.aiDescription=this.value">${esc(S.aiDescription||'')}</textarea>
+        <!-- Difficulty pills -->
+        ${S.aiMode!=='fc'?`<div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:.72rem;color:var(--t3);font-weight:700;margin-right:4px">${t('aiDifficulty')||'Difficulty'}:</span>
+          ${[['easy','🌱 '+(t('aiEasy')||'Easy')],['mixed','⚖️ '+(t('aiMixed')||'Mixed')],['hard','🔥 '+(t('aiHard')||'Hard')]].map(([v,l])=>`
+            <button onclick="S.aiDifficulty='${v}';frame(pgUpload())" class="chip${(S.aiDifficulty||'mixed')===v?' on':''}"
+              style="font-size:.72rem;padding:4px 12px">${l}</button>
+          `).join('')}
+        </div>`:''}
+      </div>
 
       <!-- COUNT selector — hidden for paste_qa -->
       ${S.aiInputMode!=='paste_qa'?`
@@ -2244,8 +2378,8 @@ function pgSessionList(test){
     }
     return`<button class="session-row" onclick="startSession('${test.id}',${i})">
       <div style="flex:1;min-width:0">
-        <div class="session-lbl">Session ${i+1}</div>
-        <div class="session-range">Questions ${start}–${end}</div>
+        <div class="session-lbl">${t('sessionShort')} ${i+1}</div>
+        <div class="session-range">${t('questionsRange')} ${start}–${end}</div>
       </div>
       <span class="session-cnt">${end-start+1} Q</span>
       ${badge}
@@ -2256,14 +2390,14 @@ function pgSessionList(test){
   return`<div class="picker-wrap" style="max-width:560px">
     <div class="picker-card" style="text-align:left;padding:32px">
       <div class="picker-title">${esc(test.title)}</div>
-      <div class="picker-sub">${totalQ} questions · ${sessionSize} per session · ${totalSections} session${totalSections!==1?'s':''}
-        ${test.timerSeconds?` · ⏱ ${test.timerSeconds}s timer`:''}</div>
+      <div class="picker-sub">${totalQ} ${t('questionsLabel')} · ${sessionSize} ${t('perSession')} · ${totalSections} ${totalSections!==1?t('sessions'):t('session')}
+        ${test.timerSeconds?` · ⏱ ${test.timerSeconds}s ${t('timerLabel').toLowerCase()}`:''}</div>
 
       <!-- Settings row -->
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:18px 0 14px">
         <!-- Custom session size -->
         <div style="flex:1;min-width:140px">
-          <label class="fl" style="margin-bottom:6px"><i class="ti ti-list-numbers"></i> Questions per session</label>
+          <label class="fl" style="margin-bottom:6px"><i class="ti ti-list-numbers"></i> ${t('questionsPerSession')}</label>
           <div style="display:flex;gap:6px;align-items:center">
             <div class="count-chips" style="gap:5px">
               ${[5,10,15,20].map(n=>`<button class="chip${sessionSize===n&&!customSize||customSize===n?' on':''}"
@@ -2278,20 +2412,20 @@ function pgSessionList(test){
         </div>
         <!-- Shuffle toggle -->
         <div>
-          <label class="fl" style="margin-bottom:6px"><i class="ti ti-arrows-shuffle"></i> Shuffle</label>
+          <label class="fl" style="margin-bottom:6px"><i class="ti ti-arrows-shuffle"></i> ${t('shuffleLabel')}</label>
           <button onclick="S.quizShuffle=!S.quizShuffle;S.quizTestId='';S.quizQs=[];S.allQs=[];frame(pgQuiz('${test.id}'))"
             style="display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:700;
             border:1.5px solid ${doShuffle?'var(--accent)':'var(--border)'};
             background:${doShuffle?'rgba(124,92,255,.15)':'var(--bg3)'};
             color:${doShuffle?'var(--accent)':'var(--t2)'}">
             <i class="ti ${doShuffle?'ti-checks':'ti-arrows-shuffle'}"></i>
-            ${doShuffle?'ON':'OFF'}
+            ${doShuffle?t('shuffleOn'):t('shuffleOff')}
           </button>
         </div>
       </div>
 
       <div class="sessions-list">${rows}</div>
-      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="go('${S.user?'/dashboard':'/login'}')"><i class="ti ti-arrow-left"></i> Back</button>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="go('${S.user?'/dashboard':'/login'}')"><i class="ti ti-arrow-left"></i> ${t('backBtn')}</button>
     </div>
   </div>`
 }
@@ -2301,9 +2435,9 @@ function pgQuiz(rawId){
   const test=tests.find(t=>t.id===rawId||t.shareId===rawId.toUpperCase());
   if(!test)return`<div style="text-align:center;padding:80px 24px">
     <div class="empty-ico"><i class="ti ti-search"></i></div>
-    <h2 style="font-size:1.5rem;margin-bottom:8px">Test not found</h2>
-    <p style="color:var(--t3);margin-bottom:22px">Check the Test ID and try again.</p>
-    <button class="btn btn-secondary" onclick="go('/login')">Go Home</button></div>`;
+    <h2 style="font-size:1.5rem;margin-bottom:8px">${t('testNotFound')||'Test not found'}</h2>
+    <p style="color:var(--t3);margin-bottom:22px">${t('checkIdAgain')||'Check the Test ID and try again.'}</p>
+    <button class="btn btn-secondary" onclick="go('/login')">${t('goHomeBtn')}</button></div>`;
 
   const activeSession=S.quizTestId===test.id&&S.quizQs.length>0;
   if(!activeSession) return pgSessionList(test);
@@ -2314,8 +2448,8 @@ function pgQuiz(rawId){
   const isRevealed=!!S.revealed[qi];
   const answered=Object.keys(S.answers).length;
   const totalSections=Math.ceil(S.allQs.length/S.sessionSize);
-  const sectionLabel=!S.isRetryWrong&&totalSections>1?`Section ${S.sectionIdx+1} of ${totalSections}`:'';
-  const retryLabel=S.isRetryWrong?`Retrying ${total} wrong answer${total!==1?'s':''}`:'' ;
+  const sectionLabel=!S.isRetryWrong&&totalSections>1?`${t('sectionLbl')} ${S.sectionIdx+1} ${t('sectionsOf')} ${totalSections}`:'';
+  const retryLabel=S.isRetryWrong?`${total} ${t('retryWrongN')}`:'' ;
 
   const timerLeft=(S.qTimers[qi]!==undefined)?S.qTimers[qi]:S.timerSeconds;
   const timerPct=S.timerSeconds>0?Math.round((timerLeft/S.timerSeconds)*100):100;
@@ -2342,9 +2476,9 @@ function pgQuiz(rawId){
 
   const feedbackHtml=isRevealed?`
     <div class="feedback-badge ${isCorrect?'ok':'err'}">
-      ${isCorrect?'<i class="ti ti-check"></i> Correct!':sel!==undefined?'<i class="ti ti-x"></i> Wrong — correct answer highlighted':'⏱ Time\'s up — correct answer highlighted'}
+      ${isCorrect?`<i class="ti ti-check"></i> ${t('correctMsg')}`:sel!==undefined?`<i class="ti ti-x"></i> ${t('wrongMsg')}`:`⏱ ${t('timesUp')}`}
     </div>
-    ${q.explanation?`<div class="expl-box"><div class="expl-lbl">Explanation</div>${esc(q.explanation)}</div>`:''}
+    ${q.explanation?`<div class="expl-box"><div class="expl-lbl">${t('explanationLbl')}</div>${esc(q.explanation)}</div>`:''}
   `:'';
 
   return`<div class="quiz-wrap">
@@ -2352,9 +2486,9 @@ function pgQuiz(rawId){
       ${sectionLabel?`<div class="section-badge"><i class="ti ti-folder"></i> ${sectionLabel}</div>`:''}
       ${retryLabel?`<div class="section-badge" style="background:rgba(255,90,122,.1);border-color:rgba(255,90,122,.3);color:var(--err)">↺ ${retryLabel}</div>`:''}
       <div class="quiz-name">${esc(test.title)}</div>
-      ${S.streak>=3?`<div class="streak-badge"><i class="ti ti-flame"></i> ${S.streak} in a row!</div>`:''}
+      ${S.streak>=3?`<div class="streak-badge"><i class="ti ti-flame"></i> ${S.streak} 🔥</div>`:''}
       <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-      <div class="prog-lbl"><span>Question ${qi+1} of ${total}</span><span>${pct}%</span></div>
+      <div class="prog-lbl"><span>${t('questionN')} ${qi+1} / ${total}</span><span>${pct}%</span></div>
     </div>
     <div class="qcard ${S.qDir==='left'?'slide-left':'slide-right'}">
       ${S.timerSeconds>0&&!isRevealed?`
@@ -2362,21 +2496,21 @@ function pgQuiz(rawId){
           <div class="timer-fill${timerCls}" id="timer-bar-fill" style="width:${timerPct}%"></div>
         </div>
         <div class="timer-row${timerLeft>0&&timerLeft<=10?' urgent-lbl':''}">
-          <span>⏱ Timer</span>
+          <span>⏱ ${t('timerLabel')}</span>
           <span id="timer-lbl" style="font-weight:700">${timerLeft}s</span>
         </div>`:''}
-      <div class="q-num">Question ${qi+1}</div>
+      <div class="q-num">${t('questionN')} ${qi+1}</div>
       <div class="q-text">${esc(q.text)}</div>
       <div class="opts">${optionsHtml}</div>
       ${feedbackHtml}
     </div>
     <div class="quiz-nav">
-      <button class="btn btn-secondary" ${qi===0?'disabled':''} onclick="prevQ('${test.id}')"><i class="ti ti-arrow-left"></i> Previous</button>
+      <button class="btn btn-secondary" ${qi===0?'disabled':''} onclick="prevQ('${test.id}')"><i class="ti ti-arrow-left"></i> ${t('previousBtn')}</button>
       <button class="btn btn-ghost btn-sm" onclick="showKeyboardShortcuts()" title="Keyboard shortcuts"
         style="font-size:.75rem;opacity:.55;padding:6px 9px">?</button>
       ${qi<total-1
-        ?`<button class="btn btn-primary" onclick="nextQ('${test.id}')">Next <i class="ti ti-arrow-right"></i></button>`
-        :`<button class="btn btn-primary" onclick="submitQuiz('${test.id}')">Submit Quiz</button>`}
+        ?`<button class="btn btn-primary" onclick="nextQ('${test.id}')">${t('nextBtn')} <i class="ti ti-arrow-right"></i></button>`
+        :`<button class="btn btn-primary" onclick="submitQuiz('${test.id}')">${t('submitQuiz')}</button>`}
     </div>
   </div>`
 }
@@ -2481,19 +2615,19 @@ function pgResults(rawId){
       padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;
       justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div style="font-size:.875rem;color:var(--t2)">
-        ${!S.isRetryWrong&&totalSec>1?`Section ${S.sectionIdx+1} of ${totalSec} · ${S.allQs.length} questions total`:
-          S.isRetryWrong?'Retry mode — wrong answers only':`${S.allQs.length} questions total`}
+        ${!S.isRetryWrong&&totalSec>1?`${t('sectionLbl')} ${S.sectionIdx+1} ${t('sectionsOf')} ${totalSec} · ${S.allQs.length} ${t('questionsTotal')}`:
+          S.isRetryWrong?t('retryWrongN'):`${S.allQs.length} ${t('questionsTotal')}`}
       </div>
-      ${hasNext?`<div style="font-size:.8rem;color:var(--t3)">Next: Q${nextStart}–${nextEnd}</div>`
-        :!S.isRetryWrong?`<div style="font-size:.8rem;color:var(--ok)"><i class="ti ti-check"></i> All sections complete</div>`:''}
+      ${hasNext?`<div style="font-size:.8rem;color:var(--t3)">${t('nextQRange')}: Q${nextStart}–${nextEnd}</div>`
+        :!S.isRetryWrong?`<div style="font-size:.8rem;color:var(--ok)"><i class="ti ti-check"></i> ${t('allCompleteMsg')}</div>`:''}
     </div>
 
     <div class="res-btns">
-      ${wrongCount>0?`<button class="btn btn-secondary btn-lg" onclick="retryWrong('${test.id}')"><i class="ti ti-refresh"></i> Retry ${wrongCount} Wrong</button>`:''}
-      ${hasNext?`<button class="btn btn-primary btn-lg" onclick="nextSection('${test.id}')">Next Section <i class="ti ti-arrow-right"></i></button>`:''}
-      <button class="btn btn-secondary btn-lg" onclick="retryQuiz('${test.id}')">Retry Section</button>
+      ${wrongCount>0?`<button class="btn btn-secondary btn-lg" onclick="retryWrong('${test.id}')"><i class="ti ti-refresh"></i> ${t('retrySection')} ${wrongCount}</button>`:''}
+      ${hasNext?`<button class="btn btn-primary btn-lg" onclick="nextSection('${test.id}')">${t('nextSection')} <i class="ti ti-arrow-right"></i></button>`:''}
+      <button class="btn btn-secondary btn-lg" onclick="retryQuiz('${test.id}')">${t('retrySection')}</button>
       <button class="btn btn-ghost btn-lg" onclick="go('${S.user?'/dashboard':'/login'}')">
-        ${S.user?'Dashboard':'Home'}
+        ${S.user?t('myTests'):t('goHomeBtn')}
       </button>
     </div>
 
@@ -3632,6 +3766,77 @@ async function handleGuest(rawId){
   go(`/test/${t.id}`);
 }
 function pickFile(e){const f=e.target.files[0];if(f)processFile(f)}
+
+// ── KING AI: SMART MULTI-FORMAT FILE HANDLING ─────────────────────────────────
+async function handleAIFiles(e){
+  const files=Array.from(e.target.files||[]);
+  if(!files.length) return;
+  const status=document.querySelector('#ai-file-input')?.parentElement;
+  if(status){
+    const note=document.createElement('div');
+    note.id='ai-file-busy';
+    note.style.cssText='margin-top:10px;padding:10px 14px;background:rgba(124,92,255,.1);border:1px solid rgba(124,92,255,.3);border-radius:10px;font-size:.85rem;color:var(--al);display:flex;align-items:center;gap:10px';
+    note.innerHTML='<div class="spinner" style="width:18px;height:18px;border-width:2.5px;border-top-color:var(--accent)"></div><span>Reading files…</span>';
+    status.appendChild(note);
+  }
+  const chunks=[];
+  const names=[...(S.aiFileNames||[])];
+  for(const f of files){
+    try{
+      const text=await extractTextFromFile(f);
+      if(text&&text.trim().length){
+        chunks.push(`--- File: ${f.name} ---\n${text.trim()}`);
+        names.push(`${f.name} (${(f.size/1024).toFixed(1)}KB)`);
+      }else{
+        toast(`No text in ${f.name}`,'err');
+      }
+    }catch(err){
+      console.error('extract',f.name,err);
+      toast(`Couldn't read ${f.name}: ${err.message}`,'err');
+    }
+  }
+  document.getElementById('ai-file-busy')?.remove();
+  if(chunks.length){
+    S.aiFileText=(S.aiFileText?S.aiFileText+'\n\n':'')+chunks.join('\n\n');
+    S.aiFileNames=names;
+    toast(`✓ ${chunks.length} file${chunks.length>1?'s':''} ready — ${S.aiFileText.length.toLocaleString()} chars`);
+    frame(pgUpload());
+  }
+}
+function removeAIFile(idx){
+  S.aiFileNames.splice(idx,1);
+  if(!S.aiFileNames.length){S.aiFileText='';}
+  frame(pgUpload());
+}
+async function extractTextFromFile(file){
+  const name=file.name.toLowerCase();
+  const buf=await file.arrayBuffer();
+  // PDF
+  if(name.endsWith('.pdf')||file.type==='application/pdf'){
+    if(!window.pdfjsLib) throw new Error('PDF library not loaded');
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let text='';
+    const maxPages=Math.min(pdf.numPages,40);
+    for(let i=1;i<=maxPages;i++){
+      const page=await pdf.getPage(i);
+      const tc=await page.getTextContent();
+      text+=tc.items.map(it=>it.str).join(' ')+'\n\n';
+    }
+    return text;
+  }
+  // DOCX
+  if(name.endsWith('.docx')){
+    const res=await mammoth.extractRawText({arrayBuffer:buf});
+    return res.value||'';
+  }
+  // Plain text formats
+  if(/\.(txt|md|csv|json|tsv|html|xml|log|rtf|srt)$/.test(name)||(file.type||'').startsWith('text/')){
+    return await file.text();
+  }
+  // Last resort: try as text
+  try{return await file.text();}catch{throw new Error('Unsupported format');}
+}
+
 function processFile(file){
   if(!file.name.endsWith('.docx')){toast('Please upload a .docx file','err');return}
   const dz=document.getElementById('dz');
@@ -4518,69 +4723,149 @@ function showKeyModal(){
 
 async function generateWithAI(mode){
   mode=mode||S.aiMode||'quiz';
-  const key=getGeminiKey();
   const inputMode=S.aiInputMode||'topic';
   const count=S.aiQuestionCount||10;
   const btn=document.getElementById('ai-gen-btn');
   const spin=document.getElementById('ai-spinner');
   const lbl=document.getElementById('ai-spinner-lbl');
 
-  // Read textarea values
+  // Read all textareas (in case user typed without losing focus)
   const topicVal=(document.getElementById('ai-topic')?.value||S.aiTopicPrompt||'').trim();
   const pasteQAVal=(document.getElementById('ai-paste-qa')?.value||S.aiPasteQA||'').trim();
   const articleVal=(document.getElementById('ai-article')?.value||S.aiArticleText||'').trim();
+  const descVal=(document.getElementById('ai-description')?.value||S.aiDescription||'').trim();
   if(topicVal)S.aiTopicPrompt=topicVal;
   if(pasteQAVal)S.aiPasteQA=pasteQAVal;
   if(articleVal)S.aiArticleText=articleVal;
+  if(descVal)S.aiDescription=descVal;
 
   // Validate
   if((mode==='fc'||inputMode==='topic')&&!topicVal){toast('Mavzuni yozing','err');return;}
   if(inputMode==='paste_qa'&&!pasteQAVal){toast('Savollarni joylаshtiring','err');return;}
   if(inputMode==='article'&&articleVal.length<30){toast('Matn juda qisqa','err');return;}
+  if(inputMode==='file'&&(!S.aiFileText||S.aiFileText.length<30)){toast('Fayl yuklang yoki matn juda qisqa','err');return;}
 
   if(btn)btn.disabled=true;
   if(spin)spin.style.display='flex';
   if(lbl)lbl.textContent=inputMode==='paste_qa'?'AI tahlil qilmoqda…':`AI ${count} ta ${mode==='fc'?'kartochka':'savol'} yaratmoqda…`;
 
-  // Build prompt
-  let prompt;
-  const FMT=`QUESTION: [question]
-A: [option]
-B: [option]
-C: [option]
-D: [option]
-ANSWER: [A/B/C/D]
-EXPLANATION: [one sentence]
+  // ── Smart prompt builder ─────────────────────────────────────────────────
+  const difficulty=S.aiDifficulty||'mixed';
+  const diffNote={
+    easy:'Make questions accessible for beginners — clear, foundational concepts. Distractors should be obviously wrong to someone who knows the topic.',
+    mixed:'Mix difficulty: ~30% easy recall, ~50% understanding/application, ~20% analytical. Distractors should be plausible — never silly.',
+    hard:'Make questions challenging — require deep understanding, application, or synthesis. Distractors must be subtle and tempting; avoid trivia.'
+  }[difficulty];
+
+  const userGuidance=descVal?`\n\nUSER'S INSTRUCTIONS (very important — follow these):\n"""\n${descVal.slice(0,800)}\n"""\n`:'';
+  const langHint=`Detect the dominant language of the ${inputMode==='file'?'source files':inputMode==='article'?'text':inputMode==='paste_qa'?'questions':'topic'} and write ALL output (questions, options, explanations) in THAT SAME language, unless user's instructions explicitly request a different language.`;
+
+  const FMT=`QUESTION: [the question, complete and self-contained]
+A: [option text]
+B: [option text]
+C: [option text]
+D: [option text]
+ANSWER: [single letter A/B/C/D]
+EXPLANATION: [one sentence explaining WHY the answer is correct]
 ---`;
 
-  if(mode==='fc'){
-    prompt=`Generate exactly ${count} flashcard pairs about: "${topicVal}".
-Output ONLY semicolon-separated pairs, nothing else:
-term1===definition1;term2===definition2;...termN===definitionN
-Rules: === separates term from definition. ; separates pairs. 1-2 sentence definitions. No extra text. Exactly ${count} pairs.`;
-  }else if(inputMode==='topic'){
-    prompt=`You are a quiz expert. Generate exactly ${count} multiple-choice questions about: "${topicVal}".
-Use your knowledge about this topic.
+  const qualityRules=`
+QUALITY RULES (mandatory):
+• Each question must be ANSWERABLE and have EXACTLY ONE correct answer
+• All 4 options must be roughly the same length and style — never make the correct one obviously longer
+• Distractors must be plausible (wrong but believable), never silly or off-topic
+• No "All of the above" / "None of the above" — pick a real answer
+• No yes/no or true/false — use real options
+• Vary question types: definitions, application, comparison, cause-effect — not all the same pattern
+• Skip duplicates and near-duplicates
+• Keep questions concise (under 30 words ideally)`;
 
-Format each question exactly like this:
+  let prompt;
+  if(mode==='fc'){
+    prompt=`You are an expert flashcard creator. Generate exactly ${count} high-quality flashcard pairs about: "${topicVal}".${userGuidance}
+
+Output ONLY this format — semicolon-separated pairs, nothing else, no markdown, no preamble:
+term1===definition1;term2===definition2;...termN===definitionN
+
+RULES:
+• === separates term from definition; ; separates pairs (use a real semicolon)
+• Terms: short (1-4 words ideally, a key concept/word/name)
+• Definitions: 1-2 sentences, clear and complete
+• No duplicates
+• Cover diverse aspects of the topic, not just one angle
+• Exactly ${count} pairs
+• ${langHint}`;
+  }else if(inputMode==='topic'){
+    prompt=`You are a world-class quiz designer. Generate exactly ${count} multiple-choice questions about: "${topicVal}".
+
+Use your knowledge to create educational, accurate, and engaging questions.${userGuidance}
+
+DIFFICULTY: ${diffNote}
+${qualityRules}
+
+LANGUAGE: ${langHint}
+
+Output each question in EXACTLY this format (separate with --- on its own line):
 ${FMT}
-Generate all ${count} questions separated by --- with no extra text.`;
+
+Generate all ${count} questions. No preamble, no markdown, no extra commentary — just the formatted questions.`;
   }else if(inputMode==='paste_qa'){
-    prompt=`Parse the quiz questions below and reformat them. Identify the correct answer using your knowledge.
-Output each question in this exact format:
+    prompt=`You are a quiz parser. The user has pasted raw quiz questions. Your job:
+1. Parse each question and its options
+2. Use your knowledge to identify the CORRECT answer if it isn't already marked
+3. Add a one-sentence explanation${userGuidance}
+
+LANGUAGE: ${langHint}
+
+Output EACH question in this exact format (separated by --- on its own line):
 ${FMT}
-Parse ALL questions. Keep original text. Add correct ANSWER and EXPLANATION.
+
+Parse ALL questions in order. Keep original wording exactly. No preamble.
 
 QUESTIONS TO PARSE:
-${pasteQAVal.slice(0,6000)}`;
-  }else{
-    prompt=`Read this text and generate exactly ${count} multiple-choice questions from it.
-Format each question exactly like this:
+"""
+${pasteQAVal.slice(0,8000)}
+"""`;
+  }else if(inputMode==='article'){
+    prompt=`You are an expert quiz writer. Read the text below carefully, then generate exactly ${count} multiple-choice questions based on it.${userGuidance}
+
+DIFFICULTY: ${diffNote}
+${qualityRules}
+• Questions must be answerable FROM THE TEXT — do not require outside knowledge
+• Cover different parts/sections of the text, not just the beginning
+
+LANGUAGE: ${langHint}
+
+Output format (separate each by --- on its own line):
 ${FMT}
-Base questions only on the text. Generate exactly ${count} questions.
+
+Generate exactly ${count} questions. No preamble.
 
 TEXT:
-${articleVal.slice(0,5000)}`;
+"""
+${articleVal.slice(0,7000)}
+"""`;
+  }else{ // file mode
+    const fileCap=Math.min(S.aiFileText.length,12000);
+    prompt=`You are an expert quiz writer. The user uploaded ${S.aiFileNames.length} file${S.aiFileNames.length>1?'s':''}. Read the content carefully, then generate exactly ${count} excellent multiple-choice questions based on it.${userGuidance}
+
+DIFFICULTY: ${diffNote}
+${qualityRules}
+• Questions must be answerable FROM THE UPLOADED CONTENT — do not invent facts
+• Cover different sections/files — distribute coverage evenly
+• Prefer concept and understanding questions over trivia
+
+LANGUAGE: ${langHint}
+
+Output format (each question separated by --- on its own line):
+${FMT}
+
+Generate exactly ${count} questions. No preamble, no markdown.
+
+UPLOADED CONTENT:
+"""
+${S.aiFileText.slice(0,fileCap)}
+"""`;
   }
 
   try{
@@ -4595,7 +4880,13 @@ ${articleVal.slice(0,5000)}`;
       const parsed=parseGeminiOutput(raw);
       if(!parsed.length){toast('Savollar topilmadi — qayta urinib ko\'ring','err');return;}
       S.parsedQs=[...S.parsedQs,...parsed];
-      if(!S.parsedName)S.parsedName=(inputMode==='paste_qa'?'Paste Import':inputMode==='article'?'Article Quiz':topicVal).slice(0,60);
+      if(!S.parsedName){
+        const defaultName=inputMode==='paste_qa'?'Paste Import'
+          :inputMode==='article'?'Article Quiz'
+          :inputMode==='file'?(S.aiFileNames&&S.aiFileNames[0]?S.aiFileNames[0].replace(/\s\(\d+(\.\d+)?KB\)$/,'').replace(/\.[^.]+$/,''):'File Quiz')
+          :topicVal;
+        S.parsedName=defaultName.slice(0,60);
+      }
       toast(`✨ ${parsed.length} ta savol ${inputMode==='paste_qa'?'import qilindi':'yaratildi'}!`);
       frame(pgUpload());
     }
